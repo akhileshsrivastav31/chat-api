@@ -17,6 +17,14 @@ io.on('connection', (socket) => {
         io.emit('message', data);
     });
 
+     socket.on('typing', () => {
+        socket.broadcast.emit('typing', socket.id);
+    });
+
+    socket.on('stopTyping', () => {
+        socket.broadcast.emit('stopTyping', socket.id);
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
     });
