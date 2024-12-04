@@ -35,7 +35,7 @@ run().catch(console.dir);
 
 
 // MongoDB connection
-mongoose.connect('mongodb+srv://akhileshsiliconstream:<db_password>@cluster0.wgkk9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+mongoose.connect('mongodb+srv://akhileshsiliconstream:<hcl1234>@cluster0.wgkk9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
