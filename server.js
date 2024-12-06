@@ -9,8 +9,8 @@ const bodyParser = require("body-parser");
 mongoose.connect(
   "mongodb+srv://akhileshsiliconstream:Hcl12345@cluster0.wgkk9.mongodb.net/sample_mflix?retryWrites=true&w=majority&appName=Cluster0",
   {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+    // useNewUrlParser: true,
+    // useUnifiedTopology: true,
   }
 );
 const db = mongoose.connection;
