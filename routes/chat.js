@@ -1,9 +1,9 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Message = require('../models/Message');
+const Message = require("../models/messageModel");
 
 // Get all messages for a specific room
-router.get('/:room', async (req, res) => {
+router.get("/:room", async (req, res) => {
   try {
     const room = req.params.room;
     const messages = await Message.find({ room }).sort({ timestamp: 1 });

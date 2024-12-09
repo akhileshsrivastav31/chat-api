@@ -1,24 +1,11 @@
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
-const mongoose = require("mongoose");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-
-// MongoDB connection
-mongoose.connect(
-  "mongodb+srv://akhileshsiliconstream:Hcl12345@cluster0.wgkk9.mongodb.net/sample_mflix?retryWrites=true&w=majority&appName=Cluster0",
-  {
-    // useNewUrlParser: true,
-    // useUnifiedTopology: true,
-  }
-);
-const db = mongoose.connection;
-db.on("error", console.error.bind(console, "Connection error:"));
-db.once("open", () => console.log("Connected to MongoDB"));
-
-// Models
-const Message = require("./models/Message");
+const config = require("./config");
+const { generateToken } = require("./services/cognitoService");
+require("./helpers/connectDb");
 
 // Express app setup
 const app = express();
@@ -32,32 +19,8 @@ const io = socketIo(server, {
 
 app.use(cors());
 app.use(bodyParser.json());
-app.use("/chat", require("./routes/chat"));
+app.use("/api", require("./routes"));
 
-const itemSchema = new mongoose.Schema(
-  { name: String, quantity: String },
-  { versionKey: false }
-);
-// Create a model
-// const Item = mongoose.model("ItemSchema", ItemSchema);
-const Item = mongoose.model("Item", itemSchema, "ItemSchema"); // 'ItemSchema' is the name of your collection
-// Routes
-app.get("/getItem", async (req, res) => {
-  try {
-    const items = await Item.find();
-    res.json(items);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-app.post("/addItem", async (req, res) => {
-  const newItem = new Item(req.body);
-  await newItem.save();
-  res.send(newItem);
-});
-// app.listen(port, () => {
-//   console.log(`Server is running on port ${port}`);
-// });
 // Socket.IO setup
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
@@ -83,5 +46,9 @@ io.on("connection", (socket) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = config.PORT || 3000;
+server.listen(PORT, () => {
+  // uncomment this to generate token for testing
+  // generateToken();
+  console.log(`Server running on port ${PORT}`);
+});
