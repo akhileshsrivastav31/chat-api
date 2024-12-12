@@ -5,6 +5,58 @@ const crypto = require("crypto");
 
 const cognito = new AWS.CognitoIdentityServiceProvider();
 
+const verifyUser = async (phoneNumber, confirmationCode) => {
+  const hash = computeSecretHash(
+    phoneNumber,
+    config.USER_POOL_CLIENT_ID,
+    config.USER_POOL_CLIENT_SECRET
+  );
+  const params = {
+    ClientId: config.USER_POOL_CLIENT_ID, // Replace with your Cognito App Client ID
+    Username: phoneNumber,
+    ConfirmationCode: confirmationCode,
+    SecretHash: hash,
+  };
+
+  try {
+    const result = await cognito.confirmSignUp(params).promise();
+    console.log("User verified successfully:", result);
+    return result;
+  } catch (error) {
+    console.error("Error verifying user:", error);
+    throw error;
+  }
+};
+const registerUser = async () => {
+  let phoneNumber = "918707660271";
+  const hash = computeSecretHash(
+    phoneNumber,
+    config.USER_POOL_CLIENT_ID,
+    config.USER_POOL_CLIENT_SECRET
+  );
+  const params = {
+    ClientId: config.USER_POOL_CLIENT_ID,
+    Username: phoneNumber,
+    Password: "Sumit@12",
+    SecretHash: hash,
+    UserAttributes: [
+      {
+        Name: "phone_number",
+        Value: "+" + phoneNumber,
+      },
+    ],
+  };
+
+  try {
+    const result = await cognito.signUp(params).promise();
+    console.log("User registered successfully:", result);
+    return result;
+  } catch (error) {
+    console.error("Error registering user:", error);
+    throw error;
+  }
+};
+
 const generateToken = async () => {
   try {
     const getauth = await computeSecretHash(
@@ -67,4 +119,4 @@ const generatePassword = async (session) => {
     throw new Error(error.message || "Failed to respond to the challenge");
   }
 };
-module.exports = { generateToken };
+module.exports = { generateToken, registerUser, verifyUser };

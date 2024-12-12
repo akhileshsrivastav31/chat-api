@@ -4,7 +4,7 @@ const socketIo = require("socket.io");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const config = require("./config");
-const { generateToken } = require("./services/cognitoService");
+const { generateToken, registerUser } = require("./services/cognitoService");
 require("./helpers/connectDb");
 
 // Express app setup
@@ -50,5 +50,6 @@ const PORT = config.PORT || 3000;
 server.listen(PORT, () => {
   // uncomment this to generate token for testing
   //generateToken();
+  // registerUser();
   console.log(`Server running on port ${PORT}`);
 });
