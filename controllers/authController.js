@@ -19,6 +19,7 @@ const getUser = async (req, res) => {
 const registerUser = async (req, res) => {
   try {
     let payload = req.body;
+    console.log(payload);
     if (payload["phoneNumber"] != req.cognitoUser?.username) {
       return error(res, {
         msg: "Please provide registered phone number!!",
