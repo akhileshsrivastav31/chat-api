@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
 const UserModel = new mongoose.Schema({
-  name: { type: String, required: true },
-  countryCode: { type: String, required: true },
+  name: { type: String, required: false },
+  countryCode: { type: String, required: false },
   phoneNumber: { type: String, required: true },
   image: { type: String, required: false },
   cognitoUserId: { type: String, required: true },

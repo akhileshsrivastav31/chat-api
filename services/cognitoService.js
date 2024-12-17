@@ -30,7 +30,7 @@ const verifyUser = async () => {
   }
 };
 const registerUser = async () => {
-  let phoneNumber = "+918401355858";
+  let phoneNumber = "+916387577904";
   const params = {
     ClientId: config.USER_POOL_CLIENT_ID,
     Username: phoneNumber,

@@ -53,7 +53,7 @@ io.on("connection", (socket) => {
 const PORT = config.PORT || 3000;
 server.listen(PORT, () => {
   // uncomment this to generate token for testing
-  //generateToken();
+  // generateToken();
   //registerUser();
   //verifyUser();
   console.log(`Server running on port ${PORT}`);

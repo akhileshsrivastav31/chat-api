@@ -3,8 +3,12 @@ const User = require("../models/userModel");
 
 const getUser = async (req, res) => {
   try {
+    let response = [];
+    if (req.user) {
+      response = [req.user];
+    }
     return success(res, {
-      data: [req.user],
+      data: response,
       msg: "User details fetched successfully!!",
     });
   } catch (err) {
@@ -19,12 +23,9 @@ const getUser = async (req, res) => {
 const registerUser = async (req, res) => {
   try {
     let payload = req.body;
-    console.log(payload);
-    if (payload["phoneNumber"] != req.cognitoUser?.username) {
-      return error(res, {
-        msg: "Please provide registered phone number!!",
-        error: [],
-      });
+    payload["phoneNumber"] = req.cognitoUser?.phone_number;
+    if (req.file) {
+      payload["image"] = req.file.location;
     }
     let user = await User.findOne({ phoneNumber: payload.phoneNumber });
     if (!user) {
