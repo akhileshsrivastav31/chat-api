@@ -3,9 +3,9 @@ const User = require("../models/userModel");
 
 const getUser = async (req, res) => {
   try {
-    let response = [];
+    let response = {};
     if (req.user) {
-      response = [req.user];
+      response = req.user;
     }
     return success(res, {
       data: response,
@@ -41,7 +41,7 @@ const registerUser = async (req, res) => {
       );
     }
     return success(res, {
-      data: [user],
+      data: user,
       msg: "User details fetched successfully!!",
     });
   } catch (err) {
