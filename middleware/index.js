@@ -95,7 +95,7 @@ const verifyToken = async (req, res, next) => {
     console.log(req.method);
     if (
       !dbUser &&
-      !req.url?.endsWith("/api/auth") &&
+      !req.url?.endsWith("/api/v1/auth") &&
       !["POST", "GET"].includes(req.method)
     ) {
       return error(res, {

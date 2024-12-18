@@ -23,7 +23,7 @@ const io = socketIo(server, {
 
 app.use(cors());
 app.use(bodyParser.json());
-app.use("/api", require("./routes"));
+app.use("/api/v1/", require("./routes"));
 
 // Socket.IO setup
 io.on("connection", (socket) => {
