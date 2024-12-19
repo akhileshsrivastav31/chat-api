@@ -1,7 +1,11 @@
 const express = require("express");
 const { authController } = require("../controllers");
 const { verifyToken } = require("../middleware");
-const { registerUserValidation } = require("../validations/authValidation");
+const {
+  registerUserValidation,
+  notificationTokenValidation,
+  logoutValidation,
+} = require("../validations/authValidation");
 const upload = require("../middleware/multer");
 const router = express.Router();
 
@@ -13,5 +17,14 @@ router.post(
   registerUserValidation,
   authController.registerUser
 );
+
+router.post(
+  "/notificationToken",
+  verifyToken,
+  notificationTokenValidation,
+  authController.addNotificationToken
+);
+
+router.post("/logout", verifyToken, logoutValidation, authController.logout);
 
 module.exports = router;
