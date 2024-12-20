@@ -16,6 +16,9 @@ const notificationTokenValidation = async (req, res, next) => {
     token: Joi.string().required().messages({
       "any.required": "Name field is required",
     }),
+    deviceId: Joi.string().required().messages({
+      "any.required": "Device Id field is required",
+    }),
     platform: Joi.string().required().allow("android", "ios"),
   });
   await validate(req, res, next, schema);
@@ -23,9 +26,10 @@ const notificationTokenValidation = async (req, res, next) => {
 
 const logoutValidation = async (req, res, next) => {
   const schema = Joi.object().keys({
-    token: Joi.string().required().messages({
-      "any.required": "Name field is required",
+    deviceId: Joi.string().required().messages({
+      "any.required": "Device Id field is required",
     }),
+    platform: Joi.string().required().allow("android", "ios"),
   });
   await validate(req, res, next, schema);
 };

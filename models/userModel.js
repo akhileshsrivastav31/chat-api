@@ -9,7 +9,7 @@ const UserModel = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  isUserProfileCompleted: { type: Boolean, default: true },
+  isUserProfileCompleted: { type: Boolean, default: false },
 });
 
 UserModel.pre("save", function (next) {

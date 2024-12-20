@@ -7,7 +7,7 @@ const getUser = async (req, res) => {
     let response = {};
     if (req.user) {
       response = req.user;
-      response.isUserProfileCompleted = req.user?.name ? true : false;
+      // response.isUserProfileCompleted = req.user?.name ? true : false;
     }
     return success(res, {
       data: response,
@@ -28,7 +28,8 @@ const logout = async (req, res) => {
     payload["userId"] = req.user._id;
     await UserNotificationTokenModel.deleteOne({
       userId: req.user._id,
-      token: payload.token,
+      deviceId: payload.deviceId,
+      platform: payload.platform,
     });
     return success(res, {
       data: {},
@@ -68,6 +69,10 @@ const registerUser = async (req, res) => {
     if (req.file) {
       payload["image"] = req.file.location;
     }
+    payload["isUserProfileCompleted"] = false;
+    if (payload?.name) {
+      payload["isUserProfileCompleted"] = true;
+    }
     let user = await User.findOne({ phoneNumber: payload.phoneNumber });
     if (!user) {
       payload["cognitoUserId"] = req.cognitoUser?.sub;
@@ -81,7 +86,6 @@ const registerUser = async (req, res) => {
         }
       );
     }
-    user.isUserProfileCompleted = user?.name ? true : false;
     return success(res, {
       data: user,
       msg: "User details fetched successfully!!",
