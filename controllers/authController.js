@@ -26,15 +26,23 @@ const logout = async (req, res) => {
   try {
     let payload = req.body;
     payload["userId"] = req.user._id;
-    await UserNotificationTokenModel.deleteOne({
-      userId: req.user._id,
+    let user = await UserNotificationTokenModel.findOne({
       deviceId: payload.deviceId,
       platform: payload.platform,
     });
-    return success(res, {
-      data: {},
-      msg: "User logout successfully!!",
-    });
+    if (user) {
+      await UserNotificationTokenModel.findOneAndUpdate({
+        token: "",
+      });
+      return success(res, {
+        data: {},
+        msg: "User logout successfully!!",
+      });
+    } else
+      return success(res, {
+        data: {},
+        msg: "User not found!!",
+      });
   } catch (err) {
     console.log(err);
     return error(res, {
