@@ -1,0 +1,13 @@
+const Joi = require("joi");
+const { validate } = require("./validate");
+
+const roomValidation = async (req, res, next) => {
+  const schema = Joi.object().keys({
+    phoneNumber: Joi.string().required(),
+  });
+  await validate(req, res, next, schema);
+};
+
+module.exports = {
+  roomValidation,
+};

@@ -1,5 +1,5 @@
 const success = (res, response) => {
-  response.data = response.data ? response.data : [];
+  response.data = response.data;
   response.success = response.success ?? true;
   return res.status(200).json(response);
 };

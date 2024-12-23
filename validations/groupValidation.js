@@ -6,6 +6,10 @@ const groupValidation = async (req, res, next) => {
     name: Joi.string().required().messages({
       "any.required": "Name field is required",
     }),
+    image: Joi.string().optional().allow("", null),
+    users: Joi.array().required().messages({
+      "any.required": "Users field is required",
+    }),
   });
   await validate(req, res, next, schema);
 };
