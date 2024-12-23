@@ -38,11 +38,11 @@ const logout = async (req, res) => {
         data: {},
         msg: "User logout successfully!!",
       });
-    } else
-      return success(res, {
-        data: {},
-        msg: "User not found!!",
-      });
+    }
+    return success(res, {
+      data: {},
+      msg: "User logout successfully!!",
+    });
   } catch (err) {
     console.log(err);
     return error(res, {
