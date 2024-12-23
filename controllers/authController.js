@@ -34,10 +34,6 @@ const logout = async (req, res) => {
       await UserNotificationTokenModel.findOneAndUpdate({
         token: "",
       });
-      return success(res, {
-        data: {},
-        msg: "User logout successfully!!",
-      });
     }
     return success(res, {
       data: {},
@@ -56,11 +52,29 @@ const addNotificationToken = async (req, res) => {
   try {
     let payload = req.body;
     payload["userId"] = req.user._id;
-    await UserNotificationTokenModel.create(payload);
-    return success(res, {
-      data: {},
-      msg: "Token added successfully!!",
+
+    let user = await UserNotificationTokenModel.findOne({
+      deviceId: payload.deviceId,
+      platform: payload.platform,
     });
+    if (!user) {
+      await UserNotificationTokenModel.create(payload);
+      return success(res, {
+        data: {},
+        msg: "Token added successfully!!",
+      });
+    }
+    if (user.token == payload.token) {
+      return error(res, { msg: "Token already exists!!" });
+    } else {
+      await UserNotificationTokenModel.findOneAndUpdate({
+        token: payload.token,
+      });
+      return success(res, {
+        data: {},
+        msg: "Token updated successfully!!",
+      });
+    }
   } catch (err) {
     console.log(err);
     return error(res, {
@@ -73,15 +87,16 @@ const addNotificationToken = async (req, res) => {
 const registerUser = async (req, res) => {
   try {
     let payload = req.body;
+
     payload["phoneNumber"] = req.cognitoUser?.phone_number;
     if (req.file) {
       payload["image"] = req.file.location;
     }
-    payload["isUserProfileCompleted"] = false;
-    if (payload?.name) {
-      payload["isUserProfileCompleted"] = true;
-    }
+
     let user = await User.findOne({ phoneNumber: payload.phoneNumber });
+
+    payload["isUserProfileCompleted"] = user?.name ? true : false;
+
     if (!user) {
       payload["cognitoUserId"] = req.cognitoUser?.sub;
       user = await User.create(payload);
