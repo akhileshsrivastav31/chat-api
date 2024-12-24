@@ -14,21 +14,56 @@ const createRoom = async (req, res) => {
     let user = await User.findOne({
       phoneNumber: req.body.phoneNumber,
     });
+    if (user == null) {
+      user = await User.create({
+        phoneNumber: req.body.phoneNumber,
+        isActive: false,
+        name: null,
+        image: null,
+        authId: null,
+        isAuthenticated: false,
+        isUserProfileCompleted: false,
+        countryCode: null,
+      });
+    }
     const payload = [
       {
         roomId: room._id,
         userId: req.user._id,
-        phoneNumber: null,
       },
       {
         roomId: room._id,
-        userId: user ? user?._id : null,
-        phoneNumber: user == null ? req.body.phoneNumber : null,
+        userId: user._id,
       },
     ];
     await RoomUser.insertMany(payload);
+    const result = await RoomUser.aggregate([
+      {
+        $match: { roomId: mongoose.Types.ObjectId(room._id), isDeleted: false },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userDetails",
+        },
+      },
+      { $unwind: "$userDetails" },
+      {
+        $project: {
+          _id: "$userDetails._id",
+          authId: "$userDetails.authId",
+          name: "$userDetails.name",
+          image: "$userDetails.image",
+          phoneNumber: "$userDetails.phoneNumber",
+          isAuthenticated: "$userDetails.isAuthenticated",
+        },
+      },
+    ]);
+    room.users = result;
     return success(res, {
-      data: [room],
+      data: room,
       msg: "Room created successfully!!",
     });
   } catch (err) {

@@ -87,7 +87,7 @@ const addNotificationToken = async (req, res) => {
 const registerUser = async (req, res) => {
   try {
     let payload = req.body;
-
+    payload["isAuthenticated"] = true;
     payload["phoneNumber"] = req.cognitoUser?.phone_number;
     if (req.file) {
       payload["image"] = req.file.location;
@@ -98,7 +98,7 @@ const registerUser = async (req, res) => {
     payload["isUserProfileCompleted"] = user?.name ? true : false;
 
     if (!user) {
-      payload["cognitoUserId"] = req.cognitoUser?.sub;
+      payload["authId"] = req.cognitoUser?.sub;
       user = await User.create(payload);
     } else {
       user = await User.findOneAndUpdate(

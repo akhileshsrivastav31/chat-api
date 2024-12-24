@@ -5,9 +5,8 @@ const RoomUserModel = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: false,
+    required: true,
   },
-  phoneNumber: { type: String, default: null },
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },

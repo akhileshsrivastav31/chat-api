@@ -5,11 +5,12 @@ const UserModel = new mongoose.Schema({
   countryCode: { type: String, required: false },
   phoneNumber: { type: String, required: true },
   image: { type: String, required: false },
-  cognitoUserId: { type: String, required: true },
+  authId: { type: String, required: false },
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   isUserProfileCompleted: { type: Boolean, default: false },
+  isAuthenticated: { type: Boolean, default: false },
 });
 
 UserModel.pre("save", function (next) {

@@ -24,13 +24,13 @@ const index = async (req, res) => {
 const addGroup = async (req, res) => {
   try {
     let payload = req.body;
-    let group = await Group.findOne({ name: payload.name });
-    if (group) {
-      return error(res, {
-        msg: "Group name already exists!!",
-        error: [],
-      });
-    }
+    // let group = await Group.findOne({ name: payload.name });
+    // if (group) {
+    //   return error(res, {
+    //     msg: "Group name already exists!!",
+    //     error: [],
+    //   });
+    // }
     const room = await Room.create({
       roomId: uuidv4(),
       userId: req.user._id,
@@ -38,21 +38,57 @@ const addGroup = async (req, res) => {
     });
     payload["roomId"] = room._id;
     payload["userId"] = req.user._id;
-    group = await Group.create(payload);
+    let group = await Group.create(payload);
     let users = await Promise.all(
       payload.users?.map(async (e) => {
         let user = await User.findOne({ phoneNumber: e });
+        if (user == null) {
+          user = await User.create({
+            phoneNumber: e,
+            isActive: false,
+            name: null,
+            image: null,
+            authId: null,
+            isAuthenticated: false,
+            isUserProfileCompleted: false,
+            countryCode: null,
+          });
+        }
         return {
           roomId: room._id,
-          userId: user ? user._id : null,
-          phoneNumber: user == null ? e : null,
+          userId: user._id,
         };
       }) ?? []
     );
     users.push({ roomId: room._id, userId: req.user._id });
     await RoomUser.insertMany(users);
+    const result = await RoomUser.aggregate([
+      {
+        $match: { roomId: mongoose.Types.ObjectId(room._id), isDeleted: false },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userDetails",
+        },
+      },
+      { $unwind: "$userDetails" },
+      {
+        $project: {
+          _id: "$userDetails._id",
+          authId: "$userDetails.authId",
+          name: "$userDetails.name",
+          image: "$userDetails.image",
+          phoneNumber: "$userDetails.phoneNumber",
+          isAuthenticated: "$userDetails.isAuthenticated",
+        },
+      },
+    ]);
+    group["users"] = result;
     return success(res, {
-      data: [group],
+      data: group,
       msg: "Group created successfully!!",
     });
   } catch (err) {

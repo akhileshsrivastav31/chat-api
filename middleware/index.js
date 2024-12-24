@@ -49,7 +49,7 @@ let pems = {};
 //     }
 //     const user = jwt.verify(token, pem, { algorithms: ["RS256"] });
 //     const dbUser = await User.findOne({
-//       cognitoUserId: user.sub,
+//       authId: user.sub,
 //     });
 //     if (!dbUser && !req.url?.endsWith("/api/auth") && req.method !== "POST") {
 //       return error(res, {
@@ -90,7 +90,7 @@ const verifyToken = async (req, res, next) => {
     if (tokenArr.length > 1) token = tokenArr[1];
     const user = await admin.auth().verifyIdToken(token);
     const dbUser = await User.findOne({
-      cognitoUserId: user.sub,
+      authId: user.sub,
     });
     console.log(req.method);
     if (
