@@ -85,7 +85,7 @@ const createRoom = async (req, res) => {
       users: result,
     };
     return success(res, {
-      data: [response],
+      data: response,
       msg: "Room created successfully!!",
     });
   } catch (err) {
@@ -194,6 +194,7 @@ const index = async (req, res) => {
         },
       },
     ]);
+
     return success(res, {
       data: rooms,
       msg: "Rooms listed successfully!!",

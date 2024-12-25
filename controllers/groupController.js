@@ -22,7 +22,7 @@ const index = async (req, res) => {
   }
 };
 
-const addGroup = async (req, res) => {
+const createGroup = async (req, res) => {
   try {
     let payload = req.body;
 
@@ -95,9 +95,9 @@ const addGroup = async (req, res) => {
       _id: room._id,
       roomId: room.roomId,
       type: room.type,
-      roomName: group.roomName || "",
-      roomImage: group.roomImage || "",
-      roomDescription: group.roomDescription || "",
+      roomName: group.name || "",
+      roomImage: group.image || "",
+      roomDescription: group.description || "",
       userId: room.userId,
       createdAt: room.createdAt,
       updatedAt: room.updatedAt,
@@ -107,7 +107,7 @@ const addGroup = async (req, res) => {
 
     console.log(result);
     return success(res, {
-      data: [response],
+      data: response,
       msg: "Group created successfully!!",
     });
   } catch (err) {
@@ -120,6 +120,6 @@ const addGroup = async (req, res) => {
 };
 
 module.exports = {
-  addGroup,
+  createGroup,
   index,
 };

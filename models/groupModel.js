@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const GroupModel = new mongoose.Schema({
   name: { type: String, required: true },
   image: { type: String, required: false },
+  description: { type: String, required: false },
   roomId: { type: mongoose.Schema.Types.ObjectId, ref: "Room", required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   isDeleted: { type: Boolean, default: false },

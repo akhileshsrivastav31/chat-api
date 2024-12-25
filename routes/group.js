@@ -5,6 +5,11 @@ const { groupValidation } = require("../validations/groupValidation");
 const router = express.Router();
 
 router.get("/", verifyToken, groupController.index);
-router.post("/", verifyToken, groupValidation, groupController.addGroup);
+router.post(
+  "/createGroup",
+  verifyToken,
+  groupValidation,
+  groupController.createGroup
+);
 
 module.exports = router;
