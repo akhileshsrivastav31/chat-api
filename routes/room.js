@@ -5,6 +5,11 @@ const { roomValidation } = require("../validations/roomValidation");
 const router = express.Router();
 
 router.get("/", verifyToken, roomController.index);
+router.get(
+  "/getBasicChatroomDetails/:roomId",
+  verifyToken,
+  roomController.getBasicChatroomDetails
+);
 router.post(
   "/createRoom",
   verifyToken,

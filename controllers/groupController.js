@@ -119,7 +119,42 @@ const createGroup = async (req, res) => {
   }
 };
 
+const updateGroupDetails = async (req, res) => {
+  try {
+    let payload = req.body;
+    if (req.file) {
+      payload["image"] = req.file.location;
+    }
+    const group = await Group.findOneAndUpdate(
+      {
+        roomId: payload.roomId,
+      },
+      payload,
+      {
+        new: true,
+      }
+    );
+    if (!group) {
+      return error(res, {
+        msg: "No data found!!",
+        error: ["No data found!!"],
+      });
+    }
+    return success(res, {
+      msg: "Group details updated successfully!!",
+      data: group,
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
 module.exports = {
   createGroup,
   index,
+  updateGroupDetails,
 };

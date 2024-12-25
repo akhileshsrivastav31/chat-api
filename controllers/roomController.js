@@ -101,9 +101,145 @@ const index = async (req, res) => {
   try {
     console.log(req.user);
     const rooms = await Room.aggregate([
+      // {
+      //   $match: {
+      //     userId: req.user._id,
+      //   },
+      // },
+      {
+        $lookup: {
+          from: "groups",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "group",
+        },
+      },
+      {
+        $unwind: {
+          path: "$group",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          roomName: { $ifNull: ["$group.name", ""] },
+          roomImage: { $ifNull: ["$group.image", ""] },
+          roomDescription: { $ifNull: ["$group.description", ""] },
+        },
+      },
+      {
+        $lookup: {
+          from: "roomusers",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "users",
+        },
+      },
       {
         $match: {
-          userId: req.user._id,
+          "users.userId": new mongoose.Types.ObjectId(req.user._id),
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "users.userId",
+          foreignField: "_id",
+          as: "userDetails",
+        },
+      },
+      {
+        $addFields: {
+          users: {
+            $map: {
+              input: "$users",
+              as: "roomUser",
+              in: {
+                $arrayElemAt: [
+                  {
+                    $filter: {
+                      input: "$userDetails",
+                      as: "userDetail",
+                      cond: { $eq: ["$$userDetail._id", "$$roomUser.userId"] },
+                    },
+                  },
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "messages",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "messages",
+        },
+      },
+      {
+        $addFields: {
+          lastMessage: {
+            $arrayElemAt: [
+              {
+                $slice: ["$messages", -1],
+              },
+              0,
+            ],
+          },
+        },
+      },
+
+      {
+        $project: {
+          messages: 0,
+          group: 0,
+          userDetails: 0,
+        },
+      },
+    ]);
+
+    return success(res, {
+      data: rooms,
+      msg: "Rooms listed successfully!!",
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
+const getBasicChatroomDetails = async (req, res) => {
+  try {
+    const room = await Room.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(req.params.roomId),
+        },
+      },
+      {
+        $lookup: {
+          from: "groups",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "group",
+        },
+      },
+      {
+        $unwind: {
+          path: "$group",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          roomName: { $ifNull: ["$group.name", ""] },
+          roomImage: { $ifNull: ["$group.image", ""] },
+          roomDescription: { $ifNull: ["$group.description", ""] },
         },
       },
       {
@@ -129,42 +265,19 @@ const index = async (req, res) => {
               input: "$users",
               as: "roomUser",
               in: {
-                $mergeObjects: [
-                  "$$roomUser",
+                $arrayElemAt: [
                   {
-                    userInfo: {
-                      $arrayElemAt: [
-                        {
-                          $filter: {
-                            input: "$userDetails",
-                            as: "userDetail",
-                            cond: {
-                              $eq: ["$$userDetail._id", "$$roomUser.userId"],
-                            },
-                          },
-                        },
-                        0,
-                      ],
+                    $filter: {
+                      input: "$userDetails",
+                      as: "userDetail",
+                      cond: { $eq: ["$$userDetail._id", "$$roomUser.userId"] },
                     },
                   },
+                  0,
                 ],
               },
             },
           },
-        },
-      },
-      {
-        $lookup: {
-          from: "groups",
-          localField: "_id",
-          foreignField: "roomId",
-          as: "group",
-        },
-      },
-      {
-        $unwind: {
-          path: "$group",
-          preserveNullAndEmptyArrays: true,
         },
       },
       {
@@ -187,20 +300,27 @@ const index = async (req, res) => {
           },
         },
       },
+
       {
         $project: {
           messages: 0,
+          group: 0,
           userDetails: 0,
         },
       },
     ]);
+    if (room.length == 0) {
+      return error(res, {
+        msg: "No data found",
+        error: ["No data found"],
+      });
+    }
 
     return success(res, {
-      data: rooms,
-      msg: "Rooms listed successfully!!",
+      msg: "Room info fetched successfully!!",
+      data: room[0],
     });
   } catch (err) {
-    console.log(err);
     return error(res, {
       msg: "Something went wrong!!",
       error: [err.message],
@@ -211,4 +331,5 @@ const index = async (req, res) => {
 module.exports = {
   createRoom,
   index,
+  getBasicChatroomDetails,
 };
