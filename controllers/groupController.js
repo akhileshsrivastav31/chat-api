@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { success, error } = require("../handlers");
 const Group = require("../models/groupModel");
 const Room = require("../models/roomModel");
@@ -64,7 +65,10 @@ const addGroup = async (req, res) => {
     await RoomUser.insertMany(users);
     const result = await RoomUser.aggregate([
       {
-        $match: { roomId: mongoose.Types.ObjectId(room._id), isDeleted: false },
+        $match: {
+          roomId: new mongoose.Types.ObjectId(room._id),
+          isDeleted: false,
+        },
       },
       {
         $lookup: {

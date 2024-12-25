@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { error, success } = require("../handlers");
 const Room = require("../models/roomModel");
 const RoomUser = require("../models/roomUser");
@@ -39,7 +40,10 @@ const createRoom = async (req, res) => {
     await RoomUser.insertMany(payload);
     const result = await RoomUser.aggregate([
       {
-        $match: { roomId: mongoose.Types.ObjectId(room._id), isDeleted: false },
+        $match: {
+          roomId: new mongoose.Types.ObjectId(room._id),
+          isDeleted: false,
+        },
       },
       {
         $lookup: {
