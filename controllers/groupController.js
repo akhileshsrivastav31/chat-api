@@ -25,13 +25,7 @@ const index = async (req, res) => {
 const addGroup = async (req, res) => {
   try {
     let payload = req.body;
-    // let group = await Group.findOne({ name: payload.name });
-    // if (group) {
-    //   return error(res, {
-    //     msg: "Group name already exists!!",
-    //     error: [],
-    //   });
-    // }
+
     const room = await Room.create({
       roomId: uuidv4(),
       userId: req.user._id,
@@ -82,17 +76,38 @@ const addGroup = async (req, res) => {
       {
         $project: {
           _id: "$userDetails._id",
-          authId: "$userDetails.authId",
-          name: "$userDetails.name",
-          image: "$userDetails.image",
           phoneNumber: "$userDetails.phoneNumber",
+          isActive: "$userDetails.isActive",
+          isUserProfileCompleted: "$userDetails.isUserProfileCompleted",
+          createdAt: "$userDetails.createdAt",
+          updatedAt: "$userDetails.updatedAt",
+          __v: "$userDetails.__v",
+          image: "$userDetails.image",
+          name: "$userDetails.name",
           isAuthenticated: "$userDetails.isAuthenticated",
+          authId: "$userDetails.authId",
+          countryCode: "$userDetails.countryCode",
         },
       },
     ]);
-    group["users"] = result;
+
+    const response = {
+      _id: room._id,
+      roomId: room.roomId,
+      type: room.type,
+      roomName: group.roomName || "",
+      roomImage: group.roomImage || "",
+      roomDescription: group.roomDescription || "",
+      userId: room.userId,
+      createdAt: room.createdAt,
+      updatedAt: room.updatedAt,
+      __v: room.__v,
+      users: result,
+    };
+
+    console.log(result);
     return success(res, {
-      data: group,
+      data: [response],
       msg: "Group created successfully!!",
     });
   } catch (err) {

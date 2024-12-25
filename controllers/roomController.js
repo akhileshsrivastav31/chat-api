@@ -57,17 +57,35 @@ const createRoom = async (req, res) => {
       {
         $project: {
           _id: "$userDetails._id",
-          authId: "$userDetails.authId",
-          name: "$userDetails.name",
-          image: "$userDetails.image",
           phoneNumber: "$userDetails.phoneNumber",
+          isActive: "$userDetails.isActive",
+          isUserProfileCompleted: "$userDetails.isUserProfileCompleted",
+          createdAt: "$userDetails.createdAt",
+          updatedAt: "$userDetails.updatedAt",
+          __v: "$userDetails.__v",
+          image: "$userDetails.image",
+          name: "$userDetails.name",
           isAuthenticated: "$userDetails.isAuthenticated",
+          authId: "$userDetails.authId",
+          countryCode: "$userDetails.countryCode",
         },
       },
     ]);
-    room.users = result;
+    const response = {
+      _id: room._id,
+      roomId: room.roomId,
+      type: room.type,
+      roomName: room.roomName || "",
+      roomImage: room.roomImage || "",
+      roomDescription: room.roomDescription || "",
+      userId: room.userId,
+      createdAt: room.createdAt,
+      updatedAt: room.updatedAt,
+      __v: room.__v,
+      users: result,
+    };
     return success(res, {
-      data: room,
+      data: [response],
       msg: "Room created successfully!!",
     });
   } catch (err) {

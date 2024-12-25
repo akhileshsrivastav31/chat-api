@@ -10,7 +10,7 @@ const search = async (req, res) => {
       },
       { _id: 1, name: 1, phoneNumber: 1, image: 1 }
     );
-    console.log(user);
+
     return success(res, {
       data: user,
       msg: "User searched successfully!!",
