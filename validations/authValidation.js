@@ -6,6 +6,9 @@ const registerUserValidation = async (req, res, next) => {
     name: Joi.string().optional().allow("", null).messages({
       "any.required": "Name field is required",
     }),
+    countryCode: Joi.string().optional().allow("", null).messages({
+      "any.required": "Country Code field is required",
+    }),
     image: Joi.string().optional().allow("", null),
   });
   await validate(req, res, next, schema);
