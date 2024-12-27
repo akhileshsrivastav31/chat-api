@@ -132,8 +132,24 @@ const updateGroupDetails = async (req, res) => {
       payload,
       {
         new: true,
+        runValidators: true,
       }
     );
+
+    let room = await Room.findOne({ _id: group.roomId });
+    const response = {
+      _id: group._id,
+      roomId: group.roomId,
+      roomName: group.name || "",
+      roomImage: group.image || "",
+      roomDescription: group.description || "",
+      type: room.type,
+      userId: group.userId,
+      createdAt: group.createdAt,
+      updatedAt: group.updatedAt,
+      __v: group.__v,
+    };
+
     if (!group) {
       return error(res, {
         msg: "No data found!!",
@@ -142,7 +158,7 @@ const updateGroupDetails = async (req, res) => {
     }
     return success(res, {
       msg: "Group details updated successfully!!",
-      data: group,
+      data: response,
     });
   } catch (err) {
     console.log(err);
