@@ -49,57 +49,62 @@ const createRoom = async (req, res) => {
     ]);
     console.log(roomAlreadyExists);
     if (roomAlreadyExists.length > 0) {
-      let room = await Room.findOne({ _id: roomAlreadyExists[0].roomId });
-      const result = await RoomUser.aggregate([
-        {
-          $match: {
-            roomId: new mongoose.Types.ObjectId(room._id),
-            isDeleted: false,
-          },
-        },
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "userDetails",
-          },
-        },
-        { $unwind: "$userDetails" },
-        {
-          $project: {
-            _id: "$userDetails._id",
-            phoneNumber: "$userDetails.phoneNumber",
-            isActive: "$userDetails.isActive",
-            isUserProfileCompleted: "$userDetails.isUserProfileCompleted",
-            createdAt: "$userDetails.createdAt",
-            updatedAt: "$userDetails.updatedAt",
-            __v: "$userDetails.__v",
-            image: "$userDetails.image",
-            name: "$userDetails.name",
-            isAuthenticated: "$userDetails.isAuthenticated",
-            authId: "$userDetails.authId",
-            countryCode: "$userDetails.countryCode",
-          },
-        },
-      ]);
-      const response = {
-        _id: room._id,
-        roomId: room.roomId,
-        type: room.type,
-        roomName: room.roomName || "",
-        roomImage: room.roomImage || "",
-        roomDescription: room.roomDescription || "",
-        userId: room.userId,
-        createdAt: room.createdAt,
-        updatedAt: room.updatedAt,
-        __v: room.__v,
-        users: result,
-      };
-      return success(res, {
-        data: response,
-        msg: "Room fetched successfully!!",
+      let room = await Room.findOne({
+        _id: { $in: roomAlreadyExists?.map((e) => e.roomId) },
+        type: "private",
       });
+      if (room) {
+        const result = await RoomUser.aggregate([
+          {
+            $match: {
+              roomId: new mongoose.Types.ObjectId(room._id),
+              isDeleted: false,
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "userId",
+              foreignField: "_id",
+              as: "userDetails",
+            },
+          },
+          { $unwind: "$userDetails" },
+          {
+            $project: {
+              _id: "$userDetails._id",
+              phoneNumber: "$userDetails.phoneNumber",
+              isActive: "$userDetails.isActive",
+              isUserProfileCompleted: "$userDetails.isUserProfileCompleted",
+              createdAt: "$userDetails.createdAt",
+              updatedAt: "$userDetails.updatedAt",
+              __v: "$userDetails.__v",
+              image: "$userDetails.image",
+              name: "$userDetails.name",
+              isAuthenticated: "$userDetails.isAuthenticated",
+              authId: "$userDetails.authId",
+              countryCode: "$userDetails.countryCode",
+            },
+          },
+        ]);
+        const response = {
+          _id: room._id,
+          roomId: room.roomId,
+          type: room.type,
+          roomName: room.roomName || "",
+          roomImage: room.roomImage || "",
+          roomDescription: room.roomDescription || "",
+          userId: room.userId,
+          createdAt: room.createdAt,
+          updatedAt: room.updatedAt,
+          __v: room.__v,
+          users: result,
+        };
+        return success(res, {
+          data: response,
+          msg: "Room fetched successfully!!",
+        });
+      }
     }
     const room = await Room.create({
       roomId: uuidv4(),
