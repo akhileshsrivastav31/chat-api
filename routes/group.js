@@ -23,4 +23,11 @@ router.put(
   groupController.updateGroupDetails
 );
 
+router.post("/addUserInGroup", verifyToken, groupController.addUserInGroup);
+router.post(
+  "/deleteUserFromGroup",
+  verifyToken,
+  groupController.deleteUserFromGroup
+);
+
 module.exports = router;
