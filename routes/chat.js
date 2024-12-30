@@ -1,16 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const Message = require("../models/messageModel");
+const { chatController } = require("../controllers");
+const { verifyToken } = require("../middleware");
+const { chatValidation } = require("../validations/chatValidation");
+const upload = require("../middleware/multer");
 
-// Get all messages for a specific room
-router.get("/:room", async (req, res) => {
-  try {
-    const room = req.params.room;
-    const messages = await Message.find({ room }).sort({ timestamp: 1 });
-    res.json(messages);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.post("/send", verifyToken, chatValidation, chatController.sendMessage);
+router.get("/:roomId", verifyToken, chatController.index);
 
 module.exports = router;

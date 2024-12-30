@@ -92,7 +92,6 @@ const verifyToken = async (req, res, next) => {
     const dbUser = await User.findOne({
       authId: user.sub,
     });
-    console.log(req.method);
     if (
       !dbUser &&
       !req.url?.endsWith("/api/v1/auth") &&

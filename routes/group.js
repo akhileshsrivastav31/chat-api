@@ -4,6 +4,7 @@ const { groupController } = require("../controllers");
 const {
   groupValidation,
   updateGroupValidation,
+  toggleAdminFlagValidation,
 } = require("../validations/groupValidation");
 const upload = require("../middleware/multer");
 const router = express.Router();
@@ -14,6 +15,12 @@ router.post(
   verifyToken,
   groupValidation,
   groupController.createGroup
+);
+router.put(
+  "/toggleAdminFlag",
+  verifyToken,
+  toggleAdminFlagValidation,
+  groupController.toggleAdminFlag
 );
 router.put(
   "/updateGroupDetails",

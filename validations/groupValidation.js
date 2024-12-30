@@ -26,7 +26,20 @@ const updateGroupValidation = async (req, res, next) => {
   await validate(req, res, next, schema);
 };
 
+const toggleAdminFlagValidation = async (req, res, next) => {
+  const schema = Joi.object().keys({
+    roomId: Joi.string().required().messages({
+      "any.required": "Room Id field is required",
+    }),
+    userId: Joi.string().required().messages({
+      "any.required": "User Id field is required",
+    }),
+  });
+  await validate(req, res, next, schema);
+};
+
 module.exports = {
   groupValidation,
   updateGroupValidation,
+  toggleAdminFlagValidation,
 };

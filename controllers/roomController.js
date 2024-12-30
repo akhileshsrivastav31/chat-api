@@ -84,6 +84,7 @@ const createRoom = async (req, res) => {
               isAuthenticated: "$userDetails.isAuthenticated",
               authId: "$userDetails.authId",
               countryCode: "$userDetails.countryCode",
+              isAdmin: 1,
             },
           },
         ]);
@@ -116,10 +117,12 @@ const createRoom = async (req, res) => {
       {
         roomId: room._id,
         userId: req.user._id,
+        isAdmin: false,
       },
       {
         roomId: room._id,
         userId: user._id,
+        isAdmin: false,
       },
     ];
     await RoomUser.insertMany(payload);
@@ -153,6 +156,7 @@ const createRoom = async (req, res) => {
           isAuthenticated: "$userDetails.isAuthenticated",
           authId: "$userDetails.authId",
           countryCode: "$userDetails.countryCode",
+          isAdmin: 1,
         },
       },
     ]);
@@ -239,15 +243,24 @@ const index = async (req, res) => {
               input: "$users",
               as: "roomUser",
               in: {
-                $arrayElemAt: [
+                $mergeObjects: [
                   {
-                    $filter: {
-                      input: "$userDetails",
-                      as: "userDetail",
-                      cond: { $eq: ["$$userDetail._id", "$$roomUser.userId"] },
-                    },
+                    isAdmin: "$$roomUser.isAdmin",
                   },
-                  0,
+                  {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: "$userDetails",
+                          as: "userDetail",
+                          cond: {
+                            $eq: ["$$userDetail._id", "$$roomUser.userId"],
+                          },
+                        },
+                      },
+                      0,
+                    ],
+                  },
                 ],
               },
             },
@@ -277,7 +290,6 @@ const index = async (req, res) => {
       {
         $sort: {
           "lastMessage.createdAt": -1,
-
           createdAt: -1,
         },
       },
@@ -356,15 +368,24 @@ const getBasicChatroomDetails = async (req, res) => {
               input: "$users",
               as: "roomUser",
               in: {
-                $arrayElemAt: [
+                $mergeObjects: [
                   {
-                    $filter: {
-                      input: "$userDetails",
-                      as: "userDetail",
-                      cond: { $eq: ["$$userDetail._id", "$$roomUser.userId"] },
-                    },
+                    isAdmin: "$$roomUser.isAdmin",
                   },
-                  0,
+                  {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: "$userDetails",
+                          as: "userDetail",
+                          cond: {
+                            $eq: ["$$userDetail._id", "$$roomUser.userId"],
+                          },
+                        },
+                      },
+                      0,
+                    ],
+                  },
                 ],
               },
             },
@@ -419,8 +440,81 @@ const getBasicChatroomDetails = async (req, res) => {
   }
 };
 
+const commonGroup = async (req, res) => {
+  try {
+    const roomId = req.params.roomId;
+    const roomUsers = await RoomUser.find({ roomId: roomId }, { userId: 1 });
+    const userIds = roomUsers.map((e) => e.userId);
+
+    const room = await Room.findOne({ _id: roomId });
+    if (room.type == "group") {
+      return error(res, {
+        msg: "You can't get common group for group chat!!",
+        error: ["You can't get common group for group chat!!"],
+      });
+    }
+
+    const groups = await Room.aggregate([
+      {
+        $lookup: {
+          from: "groups",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "group",
+        },
+      },
+      {
+        $unwind: {
+          path: "$group",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          roomName: { $ifNull: ["$group.name", ""] },
+          roomImage: { $ifNull: ["$group.image", ""] },
+          roomDescription: { $ifNull: ["$group.description", ""] },
+        },
+      },
+      {
+        $lookup: {
+          from: "roomusers",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "users",
+        },
+      },
+      {
+        $match: {
+          "users.userId": { $all: userIds },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          roomId: 1,
+          roomName: 1,
+          roomImage: 1,
+          roomDescription: 1,
+        },
+      },
+    ]);
+    return success(res, {
+      msg: "Common groups fetched successfully!!",
+      data: groups,
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
 module.exports = {
   createRoom,
   index,
   getBasicChatroomDetails,
+  commonGroup,
 };

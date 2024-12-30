@@ -10,6 +10,7 @@ router.get(
   verifyToken,
   roomController.getBasicChatroomDetails
 );
+router.get("/getCommonGroup/:roomId", verifyToken, roomController.commonGroup);
 router.post(
   "/createRoom",
   verifyToken,
