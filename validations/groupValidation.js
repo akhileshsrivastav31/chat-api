@@ -3,9 +3,7 @@ const { validate } = require("./validate");
 
 const groupValidation = async (req, res, next) => {
   const schema = Joi.object().keys({
-    name: Joi.string().required().messages({
-      "any.required": "Name field is required",
-    }),
+    name: Joi.string().optional().allow("", null),
     image: Joi.string().optional().allow("", null),
     description: Joi.string().optional().allow("", null),
     users: Joi.array().required().messages({
@@ -17,9 +15,8 @@ const groupValidation = async (req, res, next) => {
 
 const updateGroupValidation = async (req, res, next) => {
   const schema = Joi.object().keys({
-    name: Joi.string().required().messages({
-      "any.required": "Name field is required",
-    }),
+    name: Joi.string().optional().allow("", null),
+
     roomId: Joi.string().required().messages({
       "any.required": "Room Id field is required",
     }),

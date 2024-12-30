@@ -47,7 +47,7 @@ const createRoom = async (req, res) => {
         },
       },
     ]);
-    console.log(roomAlreadyExists);
+
     if (roomAlreadyExists.length > 0) {
       let room = await Room.findOne({
         _id: { $in: roomAlreadyExists?.map((e) => e.roomId) },
@@ -184,7 +184,6 @@ const createRoom = async (req, res) => {
 
 const index = async (req, res) => {
   try {
-    console.log(req.user);
     const rooms = await Room.aggregate([
       // {
       //   $match: {
