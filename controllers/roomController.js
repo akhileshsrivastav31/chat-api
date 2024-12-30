@@ -274,6 +274,13 @@ const index = async (req, res) => {
           },
         },
       },
+      {
+        $sort: {
+          "lastMessage.createdAt": -1,
+
+          createdAt: -1,
+        },
+      },
 
       {
         $project: {
