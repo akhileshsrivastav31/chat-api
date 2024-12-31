@@ -3,7 +3,7 @@ const { validate } = require("./validate");
 
 const chatValidation = async (req, res, next) => {
   const schema = Joi.object().keys({
-    roomId: Joi.string().required().messages({
+    _id: Joi.string().required().messages({
       "any.required": "Room Id field is required",
     }),
     message: Joi.string().required(),

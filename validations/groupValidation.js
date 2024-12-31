@@ -17,7 +17,7 @@ const updateGroupValidation = async (req, res, next) => {
   const schema = Joi.object().keys({
     name: Joi.string().optional().allow("", null),
 
-    roomId: Joi.string().required().messages({
+    _id: Joi.string().required().messages({
       "any.required": "Room Id field is required",
     }),
     image: Joi.string().optional().allow("", null),
@@ -28,7 +28,7 @@ const updateGroupValidation = async (req, res, next) => {
 
 const toggleAdminFlagValidation = async (req, res, next) => {
   const schema = Joi.object().keys({
-    roomId: Joi.string().required().messages({
+    _id: Joi.string().required().messages({
       "any.required": "Room Id field is required",
     }),
     userId: Joi.string().required().messages({

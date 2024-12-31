@@ -127,9 +127,11 @@ const updateGroupDetails = async (req, res) => {
     if (req.file) {
       payload["image"] = req.file.location;
     }
+    const roomId = payload._id;
+    delete payload._id;
     const group = await Group.findOneAndUpdate(
       {
-        roomId: payload.roomId,
+        roomId: roomId,
       },
       payload,
       {
@@ -182,8 +184,8 @@ const toggleAdminFlag = async (req, res) => {
     }
 
     let room = await Room.findOne({
-      _id: payload.roomId,
-      userId: req.user._id,
+      _id: payload._id,
+      // userId: req.user._id,
     });
     if (!room) {
       return error(res, {
@@ -192,7 +194,7 @@ const toggleAdminFlag = async (req, res) => {
       });
     }
     let roomUser = await RoomUser.findOne({
-      roomId: payload.roomId,
+      roomId: payload._id,
       userId: req.user._id,
     });
     if (!roomUser) {
@@ -201,7 +203,7 @@ const toggleAdminFlag = async (req, res) => {
         error: ["No user found!!"],
       });
     }
-    const group = await Group.findOne({ roomId: payload.roomId });
+    const group = await Group.findOne({ roomId: payload._id });
     if (!group) {
       return error(res, {
         msg: "You can't make admin in private chat!!",
@@ -215,7 +217,7 @@ const toggleAdminFlag = async (req, res) => {
       });
     }
     roomUser = await RoomUser.findOne({
-      roomId: payload.roomId,
+      roomId: payload._id,
       userId: payload.userId,
     });
     roomUser.isAdmin = !roomUser.isAdmin;
@@ -223,7 +225,7 @@ const toggleAdminFlag = async (req, res) => {
     const result = await RoomUser.aggregate([
       {
         $match: {
-          roomId: new mongoose.Types.ObjectId(payload.roomId),
+          roomId: new mongoose.Types.ObjectId(payload._id),
           userId: new mongoose.Types.ObjectId(payload.userId),
           isDeleted: false,
         },

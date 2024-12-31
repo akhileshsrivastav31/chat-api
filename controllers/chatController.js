@@ -8,7 +8,7 @@ const sendMessage = async (req, res) => {
   try {
     let payload = req.body;
     payload["sender"] = req.user._id;
-    const room = await Room.findOne({ _id: payload.roomId });
+    const room = await Room.findOne({ _id: payload._id });
     if (!room) {
       return error(res, {
         msg: "Please enter valid room id!!",
@@ -16,6 +16,9 @@ const sendMessage = async (req, res) => {
       });
     }
     payload["seenBy"] = [req.user._id];
+    payload["roomId"] = payload._id;
+    delete payload._id;
+
     let message = await Message.create(payload);
     message = await getMessageById(message._id);
     // send socket for message
@@ -36,7 +39,7 @@ const sendMessage = async (req, res) => {
 const index = async (req, res) => {
   try {
     const roomId = req.params.roomId;
-    const room = await Room.findOne({ _id: roomId });
+    // const room = await Room.findOne({ _id: roomId });
     const chats = await Message.find({ roomId })
       .populate("sender", "_id name image")
       .populate("seenBy", "_id name image")
