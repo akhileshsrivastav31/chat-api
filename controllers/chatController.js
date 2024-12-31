@@ -39,11 +39,13 @@ const sendMessage = async (req, res) => {
 const index = async (req, res) => {
   try {
     const roomId = req.params.roomId;
-    // const room = await Room.findOne({ _id: roomId });
+    let { page = 1, limit = 10 } = req.query;
     const chats = await Message.find({ roomId })
       .populate("sender", "_id name image")
       .populate("seenBy", "_id name image")
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     return success(res, {
       data: chats,
