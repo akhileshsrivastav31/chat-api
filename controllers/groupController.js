@@ -140,15 +140,15 @@ const updateGroupDetails = async (req, res) => {
 
     let room = await Room.findOne({ _id: group.roomId });
     const response = {
-      _id: group._id,
-      roomId: group.roomId,
+      _id: room._id,
+      roomId: room.roomId,
       roomName: group.name || "",
       roomImage: group.image || "",
       roomDescription: group.description || "",
       type: room.type,
-      userId: group.userId,
-      createdAt: group.createdAt,
-      updatedAt: group.updatedAt,
+      userId: room.userId,
+      createdAt: room.createdAt,
+      updatedAt: room.updatedAt,
       __v: group.__v,
     };
 
