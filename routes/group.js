@@ -30,4 +30,5 @@ router.put(
   groupController.updateGroupDetails
 );
 
+router.post("/addUserInGroup", verifyToken, groupController.addUserInGroup);
 module.exports = router;

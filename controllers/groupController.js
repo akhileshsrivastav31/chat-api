@@ -6,6 +6,56 @@ const User = require("../models/userModel");
 const RoomUser = require("../models/roomUser");
 const { v4: uuidv4 } = require("uuid");
 
+// Helper function to find or create a user by phone number
+const findOrCreateUser = async (phoneNumber) => {
+  let user = await User.findOne({ phoneNumber });
+  if (!user) {
+    user = await User.create({
+      phoneNumber,
+      isActive: false,
+      name: null,
+      image: null,
+      authId: null,
+      isAuthenticated: false,
+      isUserProfileCompleted: false,
+      countryCode: null,
+      isAdmin: false,
+    });
+  }
+  return user;
+};
+
+// Helper function to get users in a room
+const getRoomUsers = async (roomId) => {
+  return await RoomUser.aggregate([
+    {
+      $match: { roomId: new mongoose.Types.ObjectId(roomId), isDeleted: false },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "userId",
+        foreignField: "_id",
+        as: "userDetails",
+      },
+    },
+    { $unwind: "$userDetails" },
+    {
+      $project: {
+        _id: "$userDetails._id",
+        phoneNumber: "$userDetails.phoneNumber",
+        name: "$userDetails.name",
+        image: "$userDetails.image",
+        isActive: "$userDetails.isActive",
+        isUserProfileCompleted: "$userDetails.isUserProfileCompleted",
+        isAuthenticated: "$userDetails.isAuthenticated",
+        authId: "$userDetails.authId",
+        countryCode: "$userDetails.countryCode",
+      },
+    },
+  ]);
+};
+
 const index = async (req, res) => {
   try {
     let groups = await Group.find({ userId: req.user._id, isDeleted: false });
@@ -270,9 +320,70 @@ const toggleAdminFlag = async (req, res) => {
   }
 };
 
+const addUserInGroup = async (req, res) => {
+  try {
+    const { roomId, phoneNumber } = req.body;
+    if (!roomId || !phoneNumber || phoneNumber.length === 0) {
+      return error(res, { msg: "RoomId and PhoneNumbers are required!" });
+    }
+
+    // Find the room by roomId
+    const room = await Room.findById(roomId);
+    if (!room) {
+      return error(res, { msg: "Room not found!" });
+    }
+
+    // Find or create users by phone numbers
+    const userEntries = await Promise.all(
+      phoneNumber.map(async (phoneNumber) => {
+        let user = await findOrCreateUser(phoneNumber);
+
+        // Check if the user is already a member of the room
+        const isMember = await RoomUser.findOne({ roomId, userId: user._id });
+        if (isMember) {
+          return null; // Skip adding the user if already a member
+        }
+
+        return { roomId, userId: user._id };
+      })
+    );
+
+    // Filter out any null values (users who were already members)
+    const validUserEntries = userEntries.filter((entry) => entry !== null);
+
+    // If no valid users to add, return early
+    if (validUserEntries.length === 0) {
+      return success(res, {
+        msg: "All users are already members of the group!",
+      });
+    }
+
+    // Add users to the room
+    await RoomUser.insertMany(validUserEntries);
+
+    // Fetch the updated list of users in the room
+    const updatedUsers = await getRoomUsers(roomId);
+    const group = await Group.findOne({ roomId });
+
+    const response = {
+      ...room.toObject(),
+      roomName: group.name || "",
+      users: updatedUsers,
+    };
+    return success(res, {
+      msg: "Users added to the group successfully",
+      data: response,
+    });
+  } catch (err) {
+    console.error(err);
+    return error(res, { msg: "Something went wrong!", error: [err.message] });
+  }
+};
+
 module.exports = {
   createGroup,
   index,
   updateGroupDetails,
   toggleAdminFlag,
+  addUserInGroup,
 };
