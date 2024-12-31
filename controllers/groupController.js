@@ -26,10 +26,10 @@ const findOrCreateUser = async (phoneNumber) => {
 };
 
 // Helper function to get users in a room
-const getRoomUsers = async (roomId) => {
+const getRoomUsers = async (_id) => {
   return await RoomUser.aggregate([
     {
-      $match: { roomId: new mongoose.Types.ObjectId(roomId), isDeleted: false },
+      $match: { roomId: new mongoose.Types.ObjectId(_id), isDeleted: false },
     },
     {
       $lookup: {
@@ -51,6 +51,7 @@ const getRoomUsers = async (roomId) => {
         isAuthenticated: "$userDetails.isAuthenticated",
         authId: "$userDetails.authId",
         countryCode: "$userDetails.countryCode",
+        isAdmin: 1,
       },
     },
   ]);
@@ -322,13 +323,13 @@ const toggleAdminFlag = async (req, res) => {
 
 const addUserInGroup = async (req, res) => {
   try {
-    const { roomId, phoneNumber } = req.body;
-    if (!roomId || !phoneNumber || phoneNumber.length === 0) {
+    const { _id, phoneNumber } = req.body;
+    if (!_id || !phoneNumber || phoneNumber.length === 0) {
       return error(res, { msg: "RoomId and PhoneNumbers are required!" });
     }
 
     // Find the room by roomId
-    const room = await Room.findById(roomId);
+    const room = await Room.findById(_id);
     if (!room) {
       return error(res, { msg: "Room not found!" });
     }
@@ -339,18 +340,22 @@ const addUserInGroup = async (req, res) => {
         let user = await findOrCreateUser(phoneNumber);
 
         // Check if the user is already a member of the room
-        const isMember = await RoomUser.findOne({ roomId, userId: user._id });
+        const isMember = await RoomUser.findOne({
+          roomId: _id,
+          userId: user._id,
+        });
         if (isMember) {
           return null; // Skip adding the user if already a member
         }
 
-        return { roomId, userId: user._id };
+        return { roomId: _id, userId: user._id, isAdmin: false };
       })
     );
 
     // Filter out any null values (users who were already members)
     const validUserEntries = userEntries.filter((entry) => entry !== null);
 
+    console.log(validUserEntries);
     // If no valid users to add, return early
     if (validUserEntries.length === 0) {
       return success(res, {
@@ -362,12 +367,14 @@ const addUserInGroup = async (req, res) => {
     await RoomUser.insertMany(validUserEntries);
 
     // Fetch the updated list of users in the room
-    const updatedUsers = await getRoomUsers(roomId);
-    const group = await Group.findOne({ roomId });
+    const updatedUsers = await getRoomUsers(_id);
+    const group = await Group.findOne({ roomId: _id });
 
     const response = {
       ...room.toObject(),
       roomName: group.name || "",
+      roomDescription: group.description || "",
+      roomImage: group.image || "",
       users: updatedUsers,
     };
     return success(res, {
