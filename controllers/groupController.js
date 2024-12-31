@@ -324,6 +324,7 @@ const toggleAdminFlag = async (req, res) => {
 const addUserInGroup = async (req, res) => {
   try {
     const { _id, phoneNumber } = req.body;
+
     if (!_id || !phoneNumber || phoneNumber.length === 0) {
       return error(res, { msg: "RoomId and PhoneNumbers are required!" });
     }
@@ -334,29 +335,22 @@ const addUserInGroup = async (req, res) => {
       return error(res, { msg: "Room not found!" });
     }
 
-    // Find or create users by phone numbers
+    // Find or create users by phone numbers and filter non-members
     const userEntries = await Promise.all(
-      phoneNumber.map(async (phoneNumber) => {
-        let user = await findOrCreateUser(phoneNumber);
-
-        // Check if the user is already a member of the room
-        const isMember = await RoomUser.findOne({
+      phoneNumber.map(async (phone) => {
+        const user = await findOrCreateUser(phone);
+        const isMember = await RoomUser.exists({
           roomId: _id,
           userId: user._id,
         });
-        if (isMember) {
-          return null; // Skip adding the user if already a member
-        }
-
-        return { roomId: _id, userId: user._id, isAdmin: false };
+        return isMember
+          ? null
+          : { roomId: _id, userId: user._id, isAdmin: false };
       })
     );
 
-    // Filter out any null values (users who were already members)
-    const validUserEntries = userEntries.filter((entry) => entry !== null);
+    const validUserEntries = userEntries.filter(Boolean);
 
-    console.log(validUserEntries);
-    // If no valid users to add, return early
     if (validUserEntries.length === 0) {
       return success(res, {
         msg: "All users are already members of the group!",
@@ -367,16 +361,19 @@ const addUserInGroup = async (req, res) => {
     await RoomUser.insertMany(validUserEntries);
 
     // Fetch the updated list of users in the room
-    const updatedUsers = await getRoomUsers(_id);
-    const group = await Group.findOne({ roomId: _id });
+    const [updatedUsers, group] = await Promise.all([
+      getRoomUsers(_id),
+      Group.findOne({ roomId: _id }),
+    ]);
 
     const response = {
       ...room.toObject(),
-      roomName: group.name || "",
-      roomDescription: group.description || "",
-      roomImage: group.image || "",
+      roomName: group?.name || "",
+      roomDescription: group?.description || "",
+      roomImage: group?.image || "",
       users: updatedUsers,
     };
+
     return success(res, {
       msg: "Users added to the group successfully",
       data: response,
