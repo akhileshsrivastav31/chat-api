@@ -22,7 +22,7 @@ const sendMessage = async (req, res) => {
     let message = await Message.create(payload);
     message = await getMessageById(message._id);
     // send socket for message
-    io.emit(room.roomId, message);
+    io.emit(room.roomId, message, "message");
     return success(res, {
       data: message,
       msg: "Message sent successfully!!",

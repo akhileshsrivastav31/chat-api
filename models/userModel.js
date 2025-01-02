@@ -11,6 +11,8 @@ const UserModel = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
   isUserProfileCompleted: { type: Boolean, default: false },
   isAuthenticated: { type: Boolean, default: false },
+  isOnline: { type: Boolean, default: false },
+  lastSeen: { type: Date, default: Date.now },
 });
 
 UserModel.pre("save", function (next) {
