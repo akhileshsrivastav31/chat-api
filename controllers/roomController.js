@@ -456,6 +456,9 @@ const commonGroup = async (req, res) => {
 
     const groups = await Room.aggregate([
       {
+        $match: { type: "group" }, // Only include rooms of type "group"
+      },
+      {
         $lookup: {
           from: "groups",
           localField: "_id",
