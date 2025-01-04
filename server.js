@@ -30,7 +30,7 @@ io.on("connection", async function (socket) {
   socket.on("stopTyping", async (data) => {
     await notifyUser(userId, "stopTyping");
   });
-  socket.on("disconnected", async (data) => {
+  socket.on("disconnect", async (data) => {
     await User.findByIdAndUpdate(userId, {
       isOnline: false,
       lastSeen: Date.now(),
