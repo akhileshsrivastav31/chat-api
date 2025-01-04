@@ -27,6 +27,9 @@ io.on("connection", async function (socket) {
   socket.on("typing", async (data) => {
     await notifyUser(userId, "typing");
   });
+  socket.on("stopTyping", async (data) => {
+    await notifyUser(userId, "stopTyping");
+  });
   socket.on("disconnected", async (data) => {
     await User.findByIdAndUpdate(userId, {
       isOnline: false,
