@@ -5,8 +5,16 @@ const MessageModel = new mongoose.Schema({
   sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   message: { type: String, required: false, default: null },
   feId: { type: String, required: true },
+  type: { type: String, default: "text" },
   seenBy: [
     { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
+  ],
+  attachments: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Attachment",
+      required: false,
+    },
   ],
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: null },

@@ -5,7 +5,13 @@ const { verifyToken } = require("../middleware");
 const { chatValidation } = require("../validations/chatValidation");
 const upload = require("../middleware/multer");
 
-router.post("/send", verifyToken, chatValidation, chatController.sendMessage);
+router.post(
+  "/send",
+  verifyToken,
+  upload.array("attachments"),
+  chatValidation,
+  chatController.sendMessage
+);
 router.get("/:roomId", verifyToken, chatController.index);
 
 module.exports = router;

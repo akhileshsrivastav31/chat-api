@@ -8,6 +8,7 @@ const chatValidation = async (req, res, next) => {
     }),
     message: Joi.string().required(),
     feId: Joi.string().required(),
+    attachments: Joi.string().optional().allow("", null),
   });
   await validate(req, res, next, schema);
 };
