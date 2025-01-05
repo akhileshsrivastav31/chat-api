@@ -82,6 +82,7 @@ const createGroup = async (req, res) => {
       userId: req.user._id,
       type: "group",
     });
+    payload.users = [...new Set(payload.users)];
     payload["roomId"] = room._id;
     payload["userId"] = req.user._id;
     let group = await Group.create(payload);
