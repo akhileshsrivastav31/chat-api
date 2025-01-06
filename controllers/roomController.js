@@ -517,6 +517,7 @@ const commonGroup = async (req, res) => {
           roomName: 1,
           roomImage: 1,
           roomDescription: 1,
+          type: "group",
         },
       },
     ]);
