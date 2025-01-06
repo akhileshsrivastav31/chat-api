@@ -67,9 +67,15 @@ const addNotificationToken = async (req, res) => {
     if (user.token == payload.token) {
       return error(res, { msg: "Token already exists!!" });
     } else {
-      await UserNotificationTokenModel.findOneAndUpdate({
-        token: payload.token,
-      });
+      await UserNotificationTokenModel.findOneAndUpdate(
+        {
+          deviceId: payload.deviceId,
+          platform: payload.platform,
+        },
+        {
+          token: payload.token,
+        }
+      );
       return success(res, {
         data: {},
         msg: "Token updated successfully!!",

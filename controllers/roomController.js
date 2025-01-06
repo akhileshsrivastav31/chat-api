@@ -4,6 +4,7 @@ const Room = require("../models/roomModel");
 const RoomUser = require("../models/roomUser");
 const User = require("../models/userModel");
 const { v4: uuidv4 } = require("uuid");
+const Message = require("../models/messageModel");
 
 const createRoom = async (req, res) => {
   try {
@@ -191,11 +192,6 @@ const createRoom = async (req, res) => {
 const index = async (req, res) => {
   try {
     const rooms = await Room.aggregate([
-      // {
-      //   $match: {
-      //     userId: req.user._id,
-      //   },
-      // },
       {
         $lookup: {
           from: "groups",
@@ -287,12 +283,34 @@ const index = async (req, res) => {
               0,
             ],
           },
+          unseenMessageCount: {
+            $size: {
+              $filter: {
+                input: "$messages",
+                as: "message",
+                cond: {
+                  $not: {
+                    $in: [
+                      new mongoose.Types.ObjectId(req.user._id),
+                      "$$message.seenBy",
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          lastMessageDate: {
+            $ifNull: ["$lastMessage.createdAt", "$createdAt"],
+          },
         },
       },
       {
         $sort: {
-          createdAt: -1,
-          "lastMessage.createdAt": -1,
+          lastMessageDate: -1,
         },
       },
 
@@ -301,6 +319,12 @@ const index = async (req, res) => {
           messages: 0,
           group: 0,
           userDetails: 0,
+          lastMessageDate: 0,
+          lastMessage: {
+            seenBy: 0,
+            sender: 0,
+            attachments: 0,
+          },
         },
       },
     ]);
@@ -403,19 +427,6 @@ const getBasicChatroomDetails = async (req, res) => {
         },
       },
       {
-        $addFields: {
-          lastMessage: {
-            $arrayElemAt: [
-              {
-                $slice: ["$messages", -1],
-              },
-              0,
-            ],
-          },
-        },
-      },
-
-      {
         $project: {
           messages: 0,
           group: 0,
@@ -429,12 +440,17 @@ const getBasicChatroomDetails = async (req, res) => {
         error: ["No data found"],
       });
     }
+    Message.updateMany(
+      { roomId: req.params.roomId, seenBy: { $nin: [req.user._id] } },
+      { $push: { seenBy: req.user._id } }
+    );
 
     return success(res, {
       msg: "Room info fetched successfully!!",
       data: room[0],
     });
   } catch (err) {
+    console.log(err);
     return error(res, {
       msg: "Something went wrong!!",
       error: [err.message],
