@@ -3,11 +3,7 @@ const { error } = require("../handlers");
 const jwt = require("jsonwebtoken");
 const jwkToPem = require("jwk-to-pem");
 const User = require("../models/userModel");
-const admin = require("firebase-admin");
-const serviceAccount = require("../serviceAccount.json");
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+const admin = require("../utils/firebase");
 let pems = {};
 // const getPems = async () => {
 //   if (Object.keys(pems).length) return pems;

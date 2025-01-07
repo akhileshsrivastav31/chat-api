@@ -50,10 +50,11 @@ const sendMessage = async (req, res) => {
     // send socket for message
     io.emit(room.roomId, message, "message");
     // send push notification
-    const userIds = await RoomUser.find({
+    let userIds = await RoomUser.find({
       roomId: room._id,
       userId: { $ne: req.user._id },
-    }).map((doc) => doc.userId);
+    });
+    userIds = userIds.map((doc) => doc.userId);
     const tokens = await UserNotificationToken.find(
       { userId: { $in: userIds } },
       { token: 1, platform: 1 }

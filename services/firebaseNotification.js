@@ -1,9 +1,4 @@
-const admin = require("firebase-admin");
-const serviceAccount = require("../serviceAccount.json");
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+const admin = require("../utils/firebase");
 
 const sendNotificationOnMultipleDeviceTokens = async (
   deviceTokens,
@@ -36,7 +31,7 @@ const sendNotificationOnMultipleDeviceTokens = async (
         tokens: deviceTokens,
       };
     }
-    admin.messaging().sendMulticast(message);
+    admin.messaging().sendEachForMulticast(message);
     console.log("Notification sent successfully");
   } catch (error) {
     console.error("Error sending notification:", error);
