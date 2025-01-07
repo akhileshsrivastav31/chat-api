@@ -1,8 +1,13 @@
 const { error, success } = require("../handlers");
 const Message = require("../models/messageModel");
 const Room = require("../models/roomModel");
+const RoomUser = require("../models/roomUser");
 const Attachment = require("../models/attachmentModel");
 const { getSocketIo } = require("../helpers/socket");
+const UserNotificationToken = require("../models/userNotificationTokenModel");
+const {
+  sendNotificationOnMultipleDeviceTokens,
+} = require("../services/firebaseNotification");
 const io = getSocketIo();
 
 const sendMessage = async (req, res) => {
@@ -44,6 +49,39 @@ const sendMessage = async (req, res) => {
     message = await getMessageById(message._id);
     // send socket for message
     io.emit(room.roomId, message, "message");
+    // send push notification
+    const userIds = await RoomUser.find({
+      roomId: room._id,
+      userId: { $ne: req.user._id },
+    }).map((doc) => doc.userId);
+    const tokens = await UserNotificationToken.find(
+      { userId: { $in: userIds } },
+      { token: 1, platform: 1 }
+    );
+
+    if (tokens.length > 0) {
+      let androidTokens = tokens
+        .filter((t) => t.platform == "android")
+        .map((e) => e.token);
+      let iosTokens = tokens
+        .filter((t) => t.platform == "ios")
+        .map((e) => e.token);
+      if (androidTokens.length > 0)
+        sendNotificationOnMultipleDeviceTokens(
+          androidTokens,
+          "New message",
+          message.message ? message.message : "Attachment",
+          "android"
+        );
+      if (iosTokens.length > 0)
+        sendNotificationOnMultipleDeviceTokens(
+          tokens,
+          "New message",
+          message.message ? message.message : "Attachment",
+          "ios"
+        );
+    }
+
     return success(res, {
       data: message,
       msg: "Message sent successfully!!",
