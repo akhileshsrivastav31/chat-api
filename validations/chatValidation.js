@@ -6,7 +6,7 @@ const chatValidation = async (req, res, next) => {
     _id: Joi.string().required().messages({
       "any.required": "Room Id field is required",
     }),
-    message: Joi.string().required(),
+    message: Joi.string().optional().allow("", null),
     feId: Joi.string().required(),
     attachments: Joi.string().optional().allow("", null),
   });

@@ -8,6 +8,12 @@ const io = getSocketIo();
 const sendMessage = async (req, res) => {
   try {
     let payload = req.body;
+    if (!payload.message && req.files?.length == 0) {
+      return error(res, {
+        msg: "Please enter message or upload attachment!!",
+        error: ["Please enter message or upload attachment!!"],
+      });
+    }
     payload["sender"] = req.user._id;
     const room = await Room.findOne({ _id: payload._id });
     if (!room) {
