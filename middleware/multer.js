@@ -2,6 +2,7 @@ const multer = require("multer");
 const multerS3 = require("multer-s3");
 const { S3Client } = require("@aws-sdk/client-s3");
 const config = require("../config");
+const { NodeHttpHandler } = require("@aws-sdk/node-http-handler");
 
 const s3 = new S3Client({
   credentials: {
@@ -9,6 +10,10 @@ const s3 = new S3Client({
     secretAccessKey: config.IAM_USER_SECRET_KEY,
   },
   region: config.AWS_REGION,
+  requestHandler: new NodeHttpHandler({
+    connectionTimeout: 300000, // 5 minutes
+    socketTimeout: 300000, // 5 minutes
+  }),
 });
 
 const s3Storage = multerS3({
