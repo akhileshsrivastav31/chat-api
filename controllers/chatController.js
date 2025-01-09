@@ -27,7 +27,9 @@ const sendMessage = async (req, res) => {
         error: ["Please enter valid room id!!"],
       });
     }
-    if (req.files) {
+    payload["attachments"] = [];
+    payload["type"] = "text";
+    if (req.files?.length > 0) {
       payload["type"] = "attachment";
       payload["attachments"] = await Promise.all(
         req.files.map(async (file) => {
