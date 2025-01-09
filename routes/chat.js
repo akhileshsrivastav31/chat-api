@@ -13,5 +13,6 @@ router.post(
   chatController.sendMessage
 );
 router.get("/:roomId", verifyToken, chatController.index);
+router.get("/media/:roomId", verifyToken, chatController.getChatRoomMedia);
 
 module.exports = router;

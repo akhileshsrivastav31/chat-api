@@ -1,13 +1,16 @@
 const { error, success } = require("../handlers");
 const User = require("../models/userModel");
 const UserNotificationTokenModel = require("../models/userNotificationTokenModel");
+const UserSetting = require("../models/userSettings");
 
 const getUser = async (req, res) => {
   try {
     let response = {};
     if (req.user) {
-      response = req.user;
-      // response.isUserProfileCompleted = req.user?.name ? true : false;
+      response = req.user.toJSON();
+      response.settings = await UserSetting.findOne({
+        userId: req.user._id,
+      });
     }
     return success(res, {
       data: response,
@@ -26,15 +29,11 @@ const logout = async (req, res) => {
   try {
     let payload = req.body;
     payload["userId"] = req.user._id;
-    let user = await UserNotificationTokenModel.findOne({
+    await UserNotificationTokenModel.deleteMany({
+      userId: req.user._id,
       deviceId: payload.deviceId,
       platform: payload.platform,
     });
-    if (user) {
-      await UserNotificationTokenModel.findOneAndUpdate({
-        token: "",
-      });
-    }
     return success(res, {
       data: {},
       msg: "User logout successfully!!",
@@ -56,6 +55,7 @@ const addNotificationToken = async (req, res) => {
     let user = await UserNotificationTokenModel.findOne({
       deviceId: payload.deviceId,
       platform: payload.platform,
+      userId: req.user._id,
     });
     if (!user) {
       await UserNotificationTokenModel.create(payload);
@@ -68,6 +68,7 @@ const addNotificationToken = async (req, res) => {
       {
         deviceId: payload.deviceId,
         platform: payload.platform,
+        userId: req.user._id,
       },
       {
         token: payload.token,

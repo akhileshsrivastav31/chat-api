@@ -4,4 +4,5 @@ module.exports = {
   groupController: require("./groupController"),
   homeController: require("./homeController"),
   roomController: require("./roomController"),
+  userController: require("./userController"),
 };

@@ -8,6 +8,7 @@ const UserNotificationToken = require("../models/userNotificationTokenModel");
 const {
   sendNotificationOnMultipleDeviceTokens,
 } = require("../services/firebaseNotification");
+const { default: mongoose } = require("mongoose");
 const io = getSocketIo();
 
 const sendMessage = async (req, res) => {
@@ -52,10 +53,41 @@ const sendMessage = async (req, res) => {
     // send socket for message
     io.emit(room.roomId, message, "message");
     // send push notification
-    let userIds = await RoomUser.find({
-      roomId: room._id,
-      userId: { $ne: req.user._id },
-    });
+    let userIds = await RoomUser.aggregate([
+      {
+        $match: {
+          roomId: room._id,
+          userId: { $ne: req.user._id },
+        },
+      },
+      {
+        $lookup: {
+          from: "usersettings",
+          localField: "userId",
+          foreignField: "userId",
+          as: "userSettings",
+        },
+      },
+      {
+        $addFields: {
+          userSetting: { $arrayElemAt: ["$userSettings", 0] },
+        },
+      },
+      {
+        $match: {
+          $or: [
+            { userSetting: { $exists: false } },
+            { "userSetting.notificationDisabled": false },
+          ],
+        },
+      },
+      {
+        $project: {
+          userId: 1,
+        },
+      },
+    ]);
+
     userIds = userIds.map((doc) => doc.userId);
     const tokens = await UserNotificationToken.find(
       { userId: { $in: userIds } },
@@ -141,7 +173,55 @@ const getMessageById = async (id) => {
   return message;
 };
 
+const getChatRoomMedia = async (req, res) => {
+  try {
+    const roomId = req.params.roomId;
+    const chatRoomMedia = await Message.aggregate([
+      {
+        $match: {
+          attachments: { $exists: true, $ne: null },
+          roomId: new mongoose.Types.ObjectId(roomId),
+          $expr: { $gt: [{ $size: "$attachments" }, 0] },
+        },
+      },
+      {
+        $lookup: {
+          from: "attachments",
+          localField: "attachments",
+          foreignField: "_id",
+          as: "attachmentDetails",
+        },
+      },
+      {
+        $unwind: "$attachmentDetails",
+      },
+      {
+        $project: {
+          _id: "$attachmentDetails._id",
+          messageId: "$_id",
+          name: "$attachmentDetails.name",
+          url: "$attachmentDetails.url",
+          mimeType: "$attachmentDetails.mimeType",
+          size: "$attachmentDetails.size",
+          createdAt: "$attachmentDetails.createdAt",
+        },
+      },
+    ]);
+    return success(res, {
+      msg: "Chat room media listed successfully!!",
+      data: chatRoomMedia,
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   index,
+  getChatRoomMedia,
 };
