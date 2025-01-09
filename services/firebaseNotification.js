@@ -4,13 +4,19 @@ const sendNotificationOnMultipleDeviceTokens = async (
   deviceTokens,
   title,
   body,
-  deviceType
+  deviceType,
+  roomId,
+  page
 ) => {
   try {
     let message = {
       notification: {
         title: title,
         body: body,
+      },
+      data: {
+        roomId,
+        page,
       },
       tokens: deviceTokens,
     };
@@ -23,15 +29,21 @@ const sendNotificationOnMultipleDeviceTokens = async (
         apns: {
           payload: {
             aps: {
-              sound: "default",
+              alert: {
+                title: title,
+                body: body,
+              },
               badge: 1,
+              "mutable-content": 1,
             },
+            roomId,
+            page,
           },
         },
         tokens: deviceTokens,
       };
     }
-    admin.messaging().sendEachForMulticast(message);
+    const res = await admin.messaging().sendEachForMulticast(message);
     console.log("Notification sent successfully");
   } catch (error) {
     console.error("Error sending notification:", error);

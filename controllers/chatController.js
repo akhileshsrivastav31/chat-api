@@ -61,6 +61,9 @@ const sendMessage = async (req, res) => {
       { userId: { $in: userIds } },
       { token: 1, platform: 1 }
     );
+    const title = message.sender?.name
+      ? message.sender?.name
+      : message.sender?.phoneNumber;
 
     if (tokens.length > 0) {
       let androidTokens = tokens
@@ -72,16 +75,20 @@ const sendMessage = async (req, res) => {
       if (androidTokens.length > 0)
         sendNotificationOnMultipleDeviceTokens(
           androidTokens,
-          "New message",
-          message.message ? message.message : "Attachment",
-          "android"
+          title,
+          message.attachments?.length == 0 ? "New Message" : "📷 attachment",
+          "android",
+          room._id,
+          "chat-detail"
         );
       if (iosTokens.length > 0)
         sendNotificationOnMultipleDeviceTokens(
-          tokens,
-          "New message",
-          message.message ? message.message : "Attachment",
-          "ios"
+          iosTokens,
+          title,
+          message.attachments?.length == 0 ? "New Message" : "📷 attachment",
+          "ios",
+          room._id,
+          "chat-detail"
         );
     }
 
@@ -128,7 +135,7 @@ const index = async (req, res) => {
 
 const getMessageById = async (id) => {
   const message = await Message.findOne({ _id: id })
-    .populate("sender", "_id name image")
+    .populate("sender", "_id name image phoneNumber")
     .populate("seenBy", "_id name image")
     .populate("attachments", "_id name url mimeType size");
   return message;
