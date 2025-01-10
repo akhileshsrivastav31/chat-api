@@ -43,7 +43,11 @@ const sendMessage = async (req, res) => {
         })
       );
     }
-    payload["seenBy"] = [req.user._id];
+    let roomUsers = await RoomUser.find(
+      { roomId: payload._id, isChatOpen: true, userId: { $ne: req.user._id } },
+      { userId: 1 }
+    );
+    payload["seenBy"] = [req.user._id, ...roomUsers.map((e) => e.userId)];
     payload["roomId"] = payload._id;
     delete payload._id;
 
@@ -96,6 +100,13 @@ const sendMessage = async (req, res) => {
       ? message.sender?.name
       : message.sender?.phoneNumber;
 
+    const data = {
+      roomId: room._id.toString(),
+      page: "chat-detail",
+      _id: message.sender._id.toString(),
+      type: room.type,
+    };
+
     if (tokens.length > 0) {
       let androidTokens = tokens
         .filter((t) => t.platform == "android")
@@ -109,9 +120,7 @@ const sendMessage = async (req, res) => {
           title,
           message.attachments?.length == 0 ? "New Message" : "📷 attachment",
           "android",
-          room._id,
-          "chat-detail",
-          message.sender._id
+          data
         );
       if (iosTokens.length > 0)
         sendNotificationOnMultipleDeviceTokens(
@@ -119,9 +128,7 @@ const sendMessage = async (req, res) => {
           title,
           message.attachments?.length == 0 ? "New Message" : "📷 attachment",
           "ios",
-          room._id,
-          "chat-detail",
-          message.sender._id
+          data
         );
     }
 
@@ -174,7 +181,55 @@ const getMessageById = async (id) => {
   return message;
 };
 
+const getChatRoomMedia = async (req, res) => {
+  try {
+    const roomId = req.params.roomId;
+    const chatRoomMedia = await Message.aggregate([
+      {
+        $match: {
+          attachments: { $exists: true, $ne: null },
+          roomId: new mongoose.Types.ObjectId(roomId),
+          $expr: { $gt: [{ $size: "$attachments" }, 0] },
+        },
+      },
+      {
+        $lookup: {
+          from: "attachments",
+          localField: "attachments",
+          foreignField: "_id",
+          as: "attachmentDetails",
+        },
+      },
+      {
+        $unwind: "$attachmentDetails",
+      },
+      {
+        $project: {
+          _id: "$attachmentDetails._id",
+          messageId: "$_id",
+          name: "$attachmentDetails.name",
+          url: "$attachmentDetails.url",
+          mimeType: "$attachmentDetails.mimeType",
+          size: "$attachmentDetails.size",
+          createdAt: "$attachmentDetails.createdAt",
+        },
+      },
+    ]);
+    return success(res, {
+      msg: "Chat room media listed successfully!!",
+      data: chatRoomMedia,
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   index,
+  getChatRoomMedia,
 };

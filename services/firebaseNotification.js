@@ -5,9 +5,7 @@ const sendNotificationOnMultipleDeviceTokens = async (
   title,
   body,
   deviceType,
-  roomId,
-  page,
-  _id
+  data
 ) => {
   try {
     let message = {
@@ -16,10 +14,7 @@ const sendNotificationOnMultipleDeviceTokens = async (
         body: body,
       },
       data: {
-        roomId: roomId.toString(),
-        page: page,
-        _id: _id.toString(),
-        title: title,
+        ...(data ?? {}),
       },
       tokens: deviceTokens,
     };
@@ -40,8 +35,7 @@ const sendNotificationOnMultipleDeviceTokens = async (
               badge: 1,
               "mutable-content": 1,
             },
-            roomId,
-            page,
+            ...(data ?? {}),
           },
         },
         tokens: deviceTokens,
