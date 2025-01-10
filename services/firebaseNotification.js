@@ -6,7 +6,8 @@ const sendNotificationOnMultipleDeviceTokens = async (
   body,
   deviceType,
   roomId,
-  page
+  page,
+  _id
 ) => {
   try {
     let message = {
@@ -15,11 +16,14 @@ const sendNotificationOnMultipleDeviceTokens = async (
         body: body,
       },
       data: {
-        roomId,
-        page,
+        roomId: roomId.toString(),
+        page: page,
+        _id: _id.toString(),
+        title: title,
       },
       tokens: deviceTokens,
     };
+
     if (deviceType == "ios") {
       message = {
         notification: {
@@ -76,7 +80,7 @@ const sendNotificationOnTopic = async (topic, title, body, deviceType) => {
         topic: topic,
       };
     }
-    admin.messaging().send(message);
+    const res = await admin.messaging().send(message);
     console.log("Notification sent successfully");
   } catch (error) {
     console.error("Error sending notification:", error);
