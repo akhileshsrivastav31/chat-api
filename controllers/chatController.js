@@ -3,6 +3,7 @@ const Message = require("../models/messageModel");
 const Room = require("../models/roomModel");
 const RoomUser = require("../models/roomUser");
 const Attachment = require("../models/attachmentModel");
+const Group = require("../models/groupModel");
 const { getSocketIo } = require("../helpers/socket");
 const UserNotificationToken = require("../models/userNotificationTokenModel");
 const {
@@ -100,12 +101,23 @@ const sendMessage = async (req, res) => {
       ? message.sender?.name
       : message.sender?.phoneNumber;
 
-    const data = {
+    let data = {
       roomId: room._id.toString(),
       page: "chat-detail",
       _id: message.sender._id.toString(),
       type: room.type,
     };
+    if (data.type == "group") {
+      let group = await Group.findOne({
+        roomId: room._id,
+      });
+      data["roomName"] = group.name;
+      data["roomImage"] = group.image;
+    } else {
+      data["sender_name"] = title;
+      data["sender_image"] = message.sender?.image;
+    }
+    console.log(data);
 
     if (tokens.length > 0) {
       let androidTokens = tokens
