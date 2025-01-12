@@ -1,7 +1,12 @@
 const User = require("../models/userModel");
 const { default: mongoose } = require("mongoose");
 const RoomUser = require("../models/roomUser");
-const { updateRoomUserOpenRoomStatus } = require("./functions");
+const Room = require("../models/roomModel");
+const {
+  updateReceivedStatus,
+  updateMessageStatusByMessageIds,
+} = require("./functions");
+const { MessageStatus } = require("../enums");
 
 const initEvents = async (io) => {
   // Socket.IO setup
@@ -11,20 +16,36 @@ const initEvents = async (io) => {
     // mark online event
     await User.findByIdAndUpdate(userId, { isOnline: true });
     await notifyUser(userId, "online");
+    await updateReceivedStatus(userId);
 
     // trigger typing event
     socket.on("typing", async (data) => {
       await notifyUser(userId, "typing");
     });
-    // trigger open room event
-    socket.on("userRoomStatus", async (data) => {
-      console.log(data);
-      await updateRoomUserOpenRoomStatus(data.roomId, userId, data.isChatOpen);
-    });
 
     // trigger stop typing event
     socket.on("stopTyping", async (data) => {
       await notifyUser(userId, "stopTyping");
+    });
+
+    // trigger message seen event
+    socket.on("seenMessages", async (data) => {
+      await updateMessageStatusByMessageIds(
+        data._id,
+        data.messageIds ?? [],
+        MessageStatus.SEEN,
+        userId
+      );
+      const room = await Room.findOne({ _id: data._id });
+      io.emit(
+        room.roomId,
+        {
+          messageIds: data.messageIds,
+          status: MessageStatus.SEEN,
+          _id: data._id,
+        },
+        "messageSeen"
+      );
     });
     // trigger disconnect event
     socket.on("disconnect", async (data) => {

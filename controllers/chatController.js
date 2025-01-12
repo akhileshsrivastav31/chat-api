@@ -9,6 +9,7 @@ const UserNotificationToken = require("../models/userNotificationTokenModel");
 const {
   sendNotificationOnMultipleDeviceTokens,
 } = require("../services/firebaseNotification");
+const { default: mongoose } = require("mongoose");
 const io = getSocketIo();
 
 const sendMessage = async (req, res) => {
@@ -44,11 +45,7 @@ const sendMessage = async (req, res) => {
         })
       );
     }
-    let roomUsers = await RoomUser.find(
-      { roomId: payload._id, isChatOpen: true, userId: { $ne: req.user._id } },
-      { userId: 1 }
-    );
-    payload["seenBy"] = [req.user._id, ...roomUsers.map((e) => e.userId)];
+    payload["seenBy"] = [req.user._id];
     payload["roomId"] = payload._id;
     delete payload._id;
 
@@ -169,6 +166,16 @@ const index = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
+    chats = chats.map((e) => {
+      let x = e.toJSON();
+      x["sendSeenEvent"] = e.seenBy?.some(
+        (e) => e._id.toString() == req.user._id.toString()
+      )
+        ? false
+        : true;
+      return x;
+    });
+
     const total = await Message.countDocuments({ roomId });
     chats = chats.reverse();
 
@@ -196,6 +203,7 @@ const getMessageById = async (id) => {
 const getChatRoomMedia = async (req, res) => {
   try {
     const roomId = req.params.roomId;
+    let { page = 1, limit = 5 } = req.query;
     const chatRoomMedia = await Message.aggregate([
       {
         $match: {
@@ -225,6 +233,12 @@ const getChatRoomMedia = async (req, res) => {
           size: "$attachmentDetails.size",
           createdAt: "$attachmentDetails.createdAt",
         },
+      },
+      {
+        $skip: (page - 1) * limit,
+      },
+      {
+        $limit: parseInt(limit),
       },
     ]);
     return success(res, {

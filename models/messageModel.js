@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { MessageStatus } = require("../enums");
 
 const MessageModel = new mongoose.Schema({
   roomId: { type: mongoose.Schema.Types.ObjectId, ref: "Room", required: true },
@@ -16,6 +17,7 @@ const MessageModel = new mongoose.Schema({
       required: false,
     },
   ],
+  status: { type: Number, default: MessageStatus.SEND }, // 1 means
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
