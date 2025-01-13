@@ -14,5 +14,6 @@ router.post(
 );
 router.get("/:roomId", verifyToken, chatController.index);
 router.get("/media/:roomId", verifyToken, chatController.getChatRoomMedia);
+router.delete("/message/:messageId", verifyToken, chatController.deleteMessage);
 
 module.exports = router;

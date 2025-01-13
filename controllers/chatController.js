@@ -50,7 +50,7 @@ const sendMessage = async (req, res) => {
     delete payload._id;
 
     let message = await Message.create(payload);
-    message = await getMessageById(message._id);
+    message = await getMessageById(message._id, req.user._id?.toString());
     // send socket for message
     io.emit(room.roomId, message, "message");
     // send push notification
@@ -111,10 +111,9 @@ const sendMessage = async (req, res) => {
       data["roomName"] = group.name;
       data["roomImage"] = group.image;
     } else {
-      data["sender_name"] = title;
-      data["sender_image"] = message.sender?.image;
+      data["senderName"] = title;
+      data["senderImage"] = message.sender?.image;
     }
-    console.log(data);
 
     if (tokens.length > 0) {
       let androidTokens = tokens
@@ -158,7 +157,17 @@ const index = async (req, res) => {
   try {
     const roomId = req.params.roomId;
     let { page = 1, limit = 10 } = req.query;
-    let chats = await Message.find({ roomId })
+    let chats = await Message.find({
+      roomId,
+      $or: [
+        {
+          isDeleted: false,
+        },
+        {
+          isDeleted: { $exists: false },
+        },
+      ],
+    })
       .populate("sender", "_id name image")
       .populate("seenBy", "_id name image")
       .populate("attachments", "_id name url mimeType size")
@@ -192,11 +201,17 @@ const index = async (req, res) => {
   }
 };
 
-const getMessageById = async (id) => {
-  const message = await Message.findOne({ _id: id })
+const getMessageById = async (id, userId) => {
+  let message = await Message.findOne({ _id: id })
     .populate("sender", "_id name image phoneNumber")
     .populate("seenBy", "_id name image")
     .populate("attachments", "_id name url mimeType size");
+  message = message.toJSON();
+  message["sendSeenEvent"] = message?.seenBy?.some(
+    (e) => e._id.toString() == userId
+  )
+    ? false
+    : true;
   return message;
 };
 
@@ -210,6 +225,14 @@ const getChatRoomMedia = async (req, res) => {
           attachments: { $exists: true, $ne: null },
           roomId: new mongoose.Types.ObjectId(roomId),
           $expr: { $gt: [{ $size: "$attachments" }, 0] },
+          $or: [
+            {
+              isDeleted: false,
+            },
+            {
+              isDeleted: { $exists: false },
+            },
+          ],
         },
       },
       {
@@ -259,8 +282,47 @@ const getChatRoomMedia = async (req, res) => {
   }
 };
 
+const deleteMessage = async (req, res) => {
+  try {
+    const messageId = req.params.messageId;
+    let message = await Message.findOneAndUpdate(
+      {
+        _id: messageId,
+        sender: req.user._id,
+      },
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+      }
+    );
+
+    if (!message) {
+      return error(res, {
+        msg: "Provided message id is not belongs to you!!",
+        error: ["Invalid message id"],
+      });
+    }
+    message = await getMessageById(messageId, req.user._id?.toString());
+    const room = await Room.findOne({
+      _id: message.roomId,
+    });
+    io.emit(room.roomId, message, "messageDeleted");
+    return success(res, {
+      data: {},
+      msg: "Message deleted successfully!!",
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   index,
   getChatRoomMedia,
+  deleteMessage,
 };
