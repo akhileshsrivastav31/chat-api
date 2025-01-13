@@ -235,6 +235,11 @@ const getChatRoomMedia = async (req, res) => {
         },
       },
       {
+        $sort: {
+          createdAt: -1,
+        },
+      },
+      {
         $skip: (page - 1) * limit,
       },
       {
