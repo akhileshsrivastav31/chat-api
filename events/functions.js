@@ -25,6 +25,14 @@ const updateReceivedStatus = async (userId) => {
   );
 };
 
+const getMessageByIds = async (messageIds) => {
+  return await Message.find({
+    _id: {
+      $in: messageIds,
+    },
+  });
+};
+
 const updateMessageStatusByMessageIds = async (
   roomId,
   messageIds,
@@ -43,4 +51,8 @@ const updateMessageStatusByMessageIds = async (
   );
 };
 
-module.exports = { updateReceivedStatus, updateMessageStatusByMessageIds };
+module.exports = {
+  updateReceivedStatus,
+  updateMessageStatusByMessageIds,
+  getMessageByIds,
+};

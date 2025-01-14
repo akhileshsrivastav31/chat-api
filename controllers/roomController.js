@@ -440,10 +440,6 @@ const getBasicChatroomDetails = async (req, res) => {
         error: ["No data found"],
       });
     }
-    await Message.updateMany(
-      { roomId: req.params.roomId, seenBy: { $nin: [req.user._id] } },
-      { $addToSet: { seenBy: req.user._id } }
-    );
 
     return success(res, {
       msg: "Room info fetched successfully!!",

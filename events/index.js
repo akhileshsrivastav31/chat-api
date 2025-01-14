@@ -5,6 +5,7 @@ const Room = require("../models/roomModel");
 const {
   updateReceivedStatus,
   updateMessageStatusByMessageIds,
+  getMessageByIds,
 } = require("./functions");
 const { MessageStatus } = require("../enums");
 
@@ -16,7 +17,6 @@ const initEvents = async (io) => {
     // mark online event
     await User.findByIdAndUpdate(userId, { isOnline: true });
     await notifyUser(userId, "online");
-    await updateReceivedStatus(userId);
 
     // trigger typing event
     socket.on("typing", async (data) => {
@@ -30,22 +30,48 @@ const initEvents = async (io) => {
 
     // trigger message seen event
     socket.on("seenMessages", async (data) => {
-      await updateMessageStatusByMessageIds(
-        data._id,
-        data.messageIds ?? [],
-        MessageStatus.SEEN,
-        userId
+      const messages = await getMessageByIds(data.messageIds ?? []);
+      let eventsData = {
+        [MessageStatus.SEND]: [],
+        [MessageStatus.RECEIVED]: [],
+        [MessageStatus.SEEN]: [],
+      };
+      const totalUserCount = await RoomUser.countDocuments({
+        roomId: data._id,
+      });
+      await Promise.all(
+        messages.map(async (message) => {
+          if (!message.seenBy.includes(userId)) {
+            let status = MessageStatus.SEND;
+            if (totalUserCount == message.seenBy.length + 1) {
+              eventsData[MessageStatus.SEEN].push(message._id);
+              status = MessageStatus.SEEN;
+            } else {
+              eventsData[MessageStatus.SEND].push(message._id);
+            }
+            await updateMessageStatusByMessageIds(
+              data._id,
+              [message._id],
+              status,
+              userId
+            );
+          }
+        })
       );
       const room = await Room.findOne({ _id: data._id });
-      io.emit(
-        room.roomId,
-        {
-          messageIds: data.messageIds,
-          status: MessageStatus.SEEN,
-          _id: data._id,
-        },
-        "messageSeen"
-      );
+      Object.keys(eventsData).forEach((event) => {
+        if (eventsData[event].length > 0) {
+          io.emit(
+            room.roomId,
+            {
+              messageIds: eventsData[event],
+              status: event,
+              _id: data._id,
+            },
+            "messageSeen"
+          );
+        }
+      });
     });
     // trigger disconnect event
     socket.on("disconnect", async (data) => {
