@@ -65,7 +65,7 @@ const initEvents = async (io) => {
             room.roomId,
             {
               messageIds: eventsData[event],
-              status: event,
+              status: parseInt(event),
               _id: data._id,
             },
             "messageSeen"
