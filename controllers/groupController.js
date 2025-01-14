@@ -104,11 +104,11 @@ const createGroup = async (req, res) => {
         return {
           roomId: room._id,
           userId: user._id,
-          isAdmin: false,
+          isAdmin: user._id == req.user._id,
         };
       }) ?? []
     );
-    users.push({ roomId: room._id, userId: req.user._id, isAdmin: true });
+
     await RoomUser.insertMany(users);
     const result = await RoomUser.aggregate([
       {
