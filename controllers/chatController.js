@@ -51,11 +51,16 @@ const sendMessage = async (req, res) => {
 
     let message = await Message.create(payload);
     message = await getMessageById(message._id, req.user._id?.toString());
-    room?.type == "private"
-      ? (message["sendSeenEvent"] = true)
-      : (message["sendSeenEvent"] = false);
+
     // send socket for message
-    io.emit(room.roomId, message, "message");
+    io.emit(
+      room.roomId,
+      {
+        ...message,
+        sendSeenEvent: room.type == "private" ? true : message.sendSeenEvent,
+      },
+      "message"
+    );
     // send push notification
     let userIds = await RoomUser.aggregate([
       {
