@@ -51,6 +51,9 @@ const sendMessage = async (req, res) => {
 
     let message = await Message.create(payload);
     message = await getMessageById(message._id, req.user._id?.toString());
+    room?.type == "private"
+      ? (message["sendSeenEvent"] = true)
+      : (message["sendSeenEvent"] = false);
     // send socket for message
     io.emit(room.roomId, message, "message");
     // send push notification
