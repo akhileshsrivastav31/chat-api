@@ -8,6 +8,9 @@ const Message = require("../models/messageModel");
 
 const createRoom = async (req, res) => {
   try {
+    if (req.body.phoneNumber == req.user.phoneNumber) {
+      return error(res, { msg: "You cannot create a room with yourself!" });
+    }
     let user = await User.findOne({
       phoneNumber: req.body.phoneNumber,
     });

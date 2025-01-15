@@ -83,6 +83,7 @@ const createGroup = async (req, res) => {
       type: "group",
     });
     payload.users = [...new Set(payload.users)];
+    payload.users = payload.users.filter((e) => e != req.user.phoneNumber);
     payload["roomId"] = room._id;
     payload["userId"] = req.user._id;
     let group = await Group.create(payload);
@@ -108,6 +109,7 @@ const createGroup = async (req, res) => {
         };
       }) ?? []
     );
+    users.push({ roomId: room._id, userId: req.user._id, isAdmin: true });
 
     await RoomUser.insertMany(users);
     const result = await RoomUser.aggregate([

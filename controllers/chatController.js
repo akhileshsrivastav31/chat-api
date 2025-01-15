@@ -277,9 +277,22 @@ const getChatRoomMedia = async (req, res) => {
         $limit: parseInt(limit),
       },
     ]);
+    const chatRoomMediaCount = await Message.aggregate([
+      {
+        $match: {
+          attachments: { $exists: true, $ne: null },
+          roomId: new mongoose.Types.ObjectId(roomId),
+          $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+        },
+      },
+      {
+        $unwind: "$attachments",
+      },
+    ]);
+    const total = chatRoomMediaCount.length;
     return success(res, {
       msg: "Chat room media listed successfully!!",
-      data: chatRoomMedia,
+      data: { media: chatRoomMedia, total },
     });
   } catch (err) {
     console.log(err);
