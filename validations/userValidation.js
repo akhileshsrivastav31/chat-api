@@ -10,6 +10,16 @@ const settingValidation = async (req, res, next) => {
   await validate(req, res, next, schema);
 };
 
+const blockUnblockValidation = async (req, res, next) => {
+  const schema = Joi.object().keys({
+    _id: Joi.string().required().messages({
+      "any.required": "User Id field is required",
+    }),
+  });
+  await validate(req, res, next, schema);
+};
+
 module.exports = {
   settingValidation,
+  blockUnblockValidation,
 };

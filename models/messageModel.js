@@ -19,6 +19,7 @@ const MessageModel = new mongoose.Schema({
   ],
   status: { type: Number, default: MessageStatus.SEND }, // 1 means
   isDeleted: { type: Boolean, default: false },
+  sentInBlockMode: { type: Boolean, default: false },
   deletedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },

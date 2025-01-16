@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const AttachmentModel = new mongoose.Schema({
   name: { type: String, required: true },
   url: { type: String, required: true },
+  thumbnailUrl: { type: String, required: false },
   mimeType: { type: String, required: true },
   size: { type: Number, required: true },
   isDeleted: { type: Boolean, default: false },

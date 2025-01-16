@@ -10,6 +10,8 @@ const {
   sendNotificationOnMultipleDeviceTokens,
 } = require("../services/firebaseNotification");
 const { default: mongoose } = require("mongoose");
+const BlockedUser = require("../models/blockedUserModel");
+const { generateThumbnail } = require("../helpers/thumbnailGenerator");
 const io = getSocketIo();
 
 const sendMessage = async (req, res) => {
@@ -35,11 +37,19 @@ const sendMessage = async (req, res) => {
       payload["type"] = "attachment";
       payload["attachments"] = await Promise.all(
         req.files.map(async (file) => {
+          let thumbnailURL = null;
+          if (file.mimetype.startsWith("video")) {
+            thumbnailURL = await generateThumbnail(
+              file.originalname,
+              file.location
+            );
+          }
           let fileData = await Attachment.create({
             url: file.location,
             name: file.originalname,
             mimeType: file.mimetype,
             size: file.size,
+            thumbnailUrl: thumbnailURL,
           });
           return fileData._id;
         })
@@ -47,10 +57,38 @@ const sendMessage = async (req, res) => {
     }
     payload["seenBy"] = [req.user._id];
     payload["roomId"] = payload._id;
+    payload["sentInBlockMode"] = false;
     delete payload._id;
+    let isBlockedUserMessage = false;
+
+    if (room.type == "private") {
+      const isBlockedUser = await BlockedUser.findOne({
+        $or: [
+          {
+            blockedBy: req.user._id,
+          },
+          {
+            userId: req.user._id,
+          },
+        ],
+      });
+      if (isBlockedUser) {
+        isBlockedUserMessage = true;
+        payload["sentInBlockMode"] = true;
+      }
+    }
 
     let message = await Message.create(payload);
     message = await getMessageById(message._id, req.user._id?.toString());
+
+    if (isBlockedUserMessage) {
+      return success(res, {
+        data: message,
+        msg: "Message sent successfully!!",
+      });
+    }
+
+    console.log("After message send and started sending event");
 
     // send socket for message
     io.emit(
@@ -175,10 +213,22 @@ const index = async (req, res) => {
           isDeleted: { $exists: false },
         },
       ],
+      $or: [
+        {
+          sentInBlockMode: true,
+          sender: req.user._id,
+        },
+        {
+          sentInBlockMode: { $exists: false },
+        },
+        {
+          sentInBlockMode: false,
+        },
+      ],
     })
       .populate("sender", "_id name image")
       .populate("seenBy", "_id name image")
-      .populate("attachments", "_id name url mimeType size")
+      .populate("attachments", "_id name url mimeType size thumbnailUrl")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -213,7 +263,7 @@ const getMessageById = async (id, userId) => {
   let message = await Message.findOne({ _id: id })
     .populate("sender", "_id name image phoneNumber")
     .populate("seenBy", "_id name image")
-    .populate("attachments", "_id name url mimeType size");
+    .populate("attachments", "_id name url mimeType size thumbnailUrl");
   message = message.toJSON();
   message["sendSeenEvent"] = message?.seenBy?.some(
     (e) => e._id.toString() == userId
@@ -262,6 +312,7 @@ const getChatRoomMedia = async (req, res) => {
           url: "$attachmentDetails.url",
           mimeType: "$attachmentDetails.mimeType",
           size: "$attachmentDetails.size",
+          thumbnailUrl: "$attachmentDetails.thumbnailUrl",
           createdAt: "$attachmentDetails.createdAt",
         },
       },
