@@ -3,8 +3,20 @@ const { validate } = require("./validate");
 
 const settingValidation = async (req, res, next) => {
   const schema = Joi.object().keys({
-    notificationDisabled: Joi.bool().required().allow(true, false).messages({
-      "any.required": "NOtification Disabled field is required",
+    groupNotificationDisabled: Joi.bool()
+      .required()
+      .allow(true, false)
+      .messages({
+        "any.required": "Group Notification Disabled field is required",
+      }),
+    individualNotificationDisabled: Joi.bool()
+      .required()
+      .allow(true, false)
+      .messages({
+        "any.required": "Individual Notification field is required",
+      }),
+    allNotificationDisabled: Joi.bool().required().allow(true, false).messages({
+      "any.required": "All Notification Disabled field is required",
     }),
   });
   await validate(req, res, next, schema);

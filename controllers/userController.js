@@ -9,6 +9,10 @@ const addUpdateSetting = async (req, res) => {
     let setting = await UserSetting.findOne({
       userId: req.user._id,
     });
+    if (payload.allNotificationDisabled) {
+      payload["groupNotificationDisabled"] = true;
+      payload["individualNotificationDisabled"] = true;
+    }
     if (setting) {
       setting = await UserSetting.findOneAndUpdate(
         {
@@ -23,14 +27,16 @@ const addUpdateSetting = async (req, res) => {
       payload["userId"] = req.user._id;
       setting = await UserSetting.create(payload);
     }
+    let response = req.user.toJSON();
+    response.settings = setting;
     return success(res, {
       msg: "Setting updated successfully!!",
-      data: setting,
+      data: response,
     });
   } catch (err) {
     console.log(err);
     return error(res, {
-      msg: "Something went wrong!!",
+      msg: "Unable to update notification settings. Please check your internet connection",
       error: [err.message],
     });
   }
@@ -76,7 +82,30 @@ const blockUnblockUser = async (req, res) => {
   }
 };
 
+const listAllBlockedUsers = async (req, res) => {
+  try {
+    let { page = 1, limit = 10 } = req.query;
+    let blockedUsers = await BlockedUser.find({
+      blockedBy: req.user._id,
+    })
+      .populate("userId", "_id name phoneNumber image")
+      .skip((page - 1) * limit)
+      .limit(limit);
+    return success(res, {
+      msg: "Blocked users listed successfully!!",
+      data: blockedUsers,
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
 module.exports = {
   addUpdateSetting,
   blockUnblockUser,
+  listAllBlockedUsers,
 };

@@ -21,4 +21,6 @@ router.put(
   userController.blockUnblockUser
 );
 
+router.get("/blockedUsers", verifyToken, userController.listAllBlockedUsers);
+
 module.exports = router;

@@ -2,7 +2,17 @@ const mongoose = require("mongoose");
 
 const UserSettingModel = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  notificationDisabled: { type: Boolean, required: false, default: false },
+  groupNotificationDisabled: { type: Boolean, required: false, default: false },
+  individualNotificationDisabled: {
+    type: Boolean,
+    required: false,
+    default: false,
+  },
+  allNotificationDisabled: {
+    type: Boolean,
+    required: false,
+    default: false,
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

@@ -99,6 +99,20 @@ const sendMessage = async (req, res) => {
       },
       "message"
     );
+    let matchQuery = {
+      $or: [
+        { userSetting: { $exists: false } },
+        { "userSetting.individualNotificationDisabled": false },
+      ],
+    };
+    if (room.type == "group") {
+      matchQuery = {
+        $or: [
+          { userSetting: { $exists: false } },
+          { "userSetting.groupNotificationDisabled": false },
+        ],
+      };
+    }
     // send push notification
     let userIds = await RoomUser.aggregate([
       {
@@ -121,12 +135,7 @@ const sendMessage = async (req, res) => {
         },
       },
       {
-        $match: {
-          $or: [
-            { userSetting: { $exists: false } },
-            { "userSetting.notificationDisabled": false },
-          ],
-        },
+        $match: matchQuery,
       },
       {
         $project: {
@@ -154,11 +163,11 @@ const sendMessage = async (req, res) => {
       let group = await Group.findOne({
         roomId: room._id,
       });
-      data["roomName"] = group.name;
-      data["roomImage"] = group.image;
+      data["roomName"] = group.name ?? "";
+      data["roomImage"] = group.image ?? "";
     } else {
       data["senderName"] = title;
-      data["senderImage"] = message.sender?.image;
+      data["senderImage"] = message.sender?.image ?? "";
     }
 
     if (tokens.length > 0) {
