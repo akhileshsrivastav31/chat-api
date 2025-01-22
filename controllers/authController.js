@@ -112,6 +112,10 @@ const registerUser = async (req, res) => {
         }
       );
     }
+    user = user.toJSON();
+    user.settings = await UserSetting.findOne({
+      userId: req.user._id,
+    });
     return success(res, {
       data: user,
       msg: "User details fetched successfully!!",
