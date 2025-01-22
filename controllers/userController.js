@@ -120,6 +120,7 @@ const deleteUser = async (req, res) => {
         isDeleted: true,
         deletedAt: new Date(),
         phoneNumber: req.user.phoneNumber + "_deleted",
+        authId: req.user.authId + "_deleted",
       }
     );
     return success(res, {
