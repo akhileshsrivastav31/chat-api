@@ -138,6 +138,26 @@ const sendMessage = async (req, res) => {
         $match: matchQuery,
       },
       {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $match: {
+          $or: [
+            {
+              "user.isDeleted": { $exists: false },
+            },
+            {
+              "user.isDeleted": false,
+            },
+          ],
+        },
+      },
+      {
         $project: {
           userId: 1,
         },

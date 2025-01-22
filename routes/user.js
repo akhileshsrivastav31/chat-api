@@ -22,5 +22,6 @@ router.put(
 );
 
 router.get("/blockedUsers", verifyToken, userController.listAllBlockedUsers);
+router.delete("/deleteUser", verifyToken, userController.deleteUser);
 
 module.exports = router;

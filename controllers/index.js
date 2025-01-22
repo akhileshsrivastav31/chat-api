@@ -5,4 +5,5 @@ module.exports = {
   homeController: require("./homeController"),
   roomController: require("./roomController"),
   userController: require("./userController"),
+  appController: require("./appController"),
 };

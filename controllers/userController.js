@@ -1,7 +1,9 @@
 const { error, success } = require("../handlers");
 const BlockedUser = require("../models/blockedUserModel");
 const RoomUser = require("../models/roomUser");
+const User = require("../models/userModel");
 const UserSetting = require("../models/userSettings");
+const firebaseAdmin = require("../utils/firebase");
 
 const addUpdateSetting = async (req, res) => {
   try {
@@ -91,9 +93,38 @@ const listAllBlockedUsers = async (req, res) => {
       .populate("userId", "_id name phoneNumber image")
       .skip((page - 1) * limit)
       .limit(limit);
+    const total = await BlockedUser.find({
+      blockedBy: req.user._id,
+    }).countDocuments();
     return success(res, {
       msg: "Blocked users listed successfully!!",
-      data: blockedUsers,
+      data: { total, blockedUsers },
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    await firebaseAdmin.auth().deleteUser(req.user.authId);
+    await User.updateOne(
+      {
+        _id: req.user._id,
+      },
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        phoneNumber: req.user.phoneNumber + "_deleted",
+      }
+    );
+    return success(res, {
+      msg: "User deleted successfully!!",
+      data: {},
     });
   } catch (err) {
     console.log(err);
@@ -108,4 +139,5 @@ module.exports = {
   addUpdateSetting,
   blockUnblockUser,
   listAllBlockedUsers,
+  deleteUser,
 };

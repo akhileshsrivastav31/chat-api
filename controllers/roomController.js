@@ -148,6 +148,18 @@ const createRoom = async (req, res) => {
       },
       { $unwind: "$userDetails" },
       {
+        $match: {
+          $or: [
+            {
+              "userDetails.isDeleted": false,
+            },
+            {
+              "userDetails.isDeleted": { $exists: false },
+            },
+          ],
+        },
+      },
+      {
         $project: {
           _id: "$userDetails._id",
           phoneNumber: "$userDetails.phoneNumber",
@@ -255,7 +267,24 @@ const index = async (req, res) => {
                           input: "$userDetails",
                           as: "userDetail",
                           cond: {
-                            $eq: ["$$userDetail._id", "$$roomUser.userId"],
+                            $and: [
+                              {
+                                $eq: ["$$userDetail._id", "$$roomUser.userId"],
+                              },
+                              {
+                                $or: [
+                                  { $eq: ["$$userDetail.isDeleted", false] }, // isDeleted is false
+                                  {
+                                    $not: {
+                                      $ifNull: [
+                                        "$$userDetail.isDeleted",
+                                        false,
+                                      ],
+                                    },
+                                  }, // isDeleted is undefined or null
+                                ],
+                              },
+                            ],
                           },
                         },
                       },
@@ -408,7 +437,24 @@ const getBasicChatroomDetails = async (req, res) => {
                           input: "$userDetails",
                           as: "userDetail",
                           cond: {
-                            $eq: ["$$userDetail._id", "$$roomUser.userId"],
+                            $and: [
+                              {
+                                $eq: ["$$userDetail._id", "$$roomUser.userId"],
+                              },
+                              {
+                                $or: [
+                                  { $eq: ["$$userDetail.isDeleted", false] }, // isDeleted is false
+                                  {
+                                    $not: {
+                                      $ifNull: [
+                                        "$$userDetail.isDeleted",
+                                        false,
+                                      ],
+                                    },
+                                  }, // isDeleted is undefined or null
+                                ],
+                              },
+                            ],
                           },
                         },
                       },

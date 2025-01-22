@@ -41,6 +41,18 @@ const getRoomUsers = async (_id) => {
     },
     { $unwind: "$userDetails" },
     {
+      $match: {
+        $or: [
+          {
+            "userDetails.isDeleted": false,
+          },
+          {
+            "userDetails.isDeleted": { $exists: false },
+          },
+        ],
+      },
+    },
+    {
       $project: {
         _id: "$userDetails._id",
         phoneNumber: "$userDetails.phoneNumber",
@@ -128,6 +140,18 @@ const createGroup = async (req, res) => {
         },
       },
       { $unwind: "$userDetails" },
+      {
+        $match: {
+          $or: [
+            {
+              "userDetails.isDeleted": false,
+            },
+            {
+              "userDetails.isDeleted": { $exists: false },
+            },
+          ],
+        },
+      },
       {
         $project: {
           _id: "$userDetails._id",
@@ -293,6 +317,18 @@ const toggleAdminFlag = async (req, res) => {
         },
       },
       { $unwind: "$userDetails" },
+      {
+        $match: {
+          $or: [
+            {
+              "userDetails.isDeleted": false,
+            },
+            {
+              "userDetails.isDeleted": { $exists: false },
+            },
+          ],
+        },
+      },
       {
         $project: {
           _id: "$userDetails._id",

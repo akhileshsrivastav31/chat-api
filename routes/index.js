@@ -7,5 +7,6 @@ router.use("/home", require("./home"));
 router.use("/groups", require("./group"));
 router.use("/rooms", require("./room"));
 router.use("/users", require("./user"));
+router.use("/app", require("./app"));
 
 module.exports = router;
