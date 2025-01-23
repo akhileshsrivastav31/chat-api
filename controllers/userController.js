@@ -11,10 +11,6 @@ const addUpdateSetting = async (req, res) => {
     let setting = await UserSetting.findOne({
       userId: req.user._id,
     });
-    if (payload.allNotificationDisabled) {
-      payload["groupNotificationDisabled"] = true;
-      payload["individualNotificationDisabled"] = true;
-    }
     if (setting) {
       setting = await UserSetting.findOneAndUpdate(
         {

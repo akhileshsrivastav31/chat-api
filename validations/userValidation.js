@@ -15,9 +15,6 @@ const settingValidation = async (req, res, next) => {
       .messages({
         "any.required": "Individual Notification field is required",
       }),
-    allNotificationDisabled: Joi.bool().required().allow(true, false).messages({
-      "any.required": "All Notification Disabled field is required",
-    }),
   });
   await validate(req, res, next, schema);
 };
