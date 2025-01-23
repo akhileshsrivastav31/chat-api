@@ -5,6 +5,10 @@ const RoomUser = require("../models/roomUser");
 const User = require("../models/userModel");
 const { v4: uuidv4 } = require("uuid");
 const Message = require("../models/messageModel");
+const { updateMessageStatusByMessageIds } = require("../events/functions");
+const { MessageStatus } = require("../enums");
+const { getSocketIo } = require("../helpers/socket");
+const io = getSocketIo();
 
 const createRoom = async (req, res) => {
   try {
@@ -250,6 +254,14 @@ const index = async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: "blockedusers",
+          localField: "users.userId",
+          foreignField: "userId",
+          as: "blockedDetails",
+        },
+      },
+      {
         $addFields: {
           users: {
             $map: {
@@ -259,6 +271,9 @@ const index = async (req, res) => {
                 $mergeObjects: [
                   {
                     isAdmin: "$$roomUser.isAdmin",
+                    isNotificationEnabled: {
+                      $ifNull: ["$$roomUser.isNotificationEnabled", true],
+                    },
                   },
                   {
                     $arrayElemAt: [
@@ -290,6 +305,37 @@ const index = async (req, res) => {
                       },
                       0,
                     ],
+                  },
+                  {
+                    isBlocked: {
+                      $gt: [
+                        {
+                          $size: {
+                            $filter: {
+                              input: "$blockedDetails",
+                              as: "blockedDetail",
+                              cond: {
+                                $and: [
+                                  {
+                                    $eq: [
+                                      "$$blockedDetail.blockedBy",
+                                      new mongoose.Types.ObjectId(req.user._id),
+                                    ],
+                                  },
+                                  {
+                                    $eq: [
+                                      "$$blockedDetail.userId",
+                                      "$$roomUser.userId",
+                                    ],
+                                  },
+                                ],
+                              },
+                            },
+                          },
+                        },
+                        0,
+                      ],
+                    },
                   },
                 ],
               },
@@ -579,9 +625,300 @@ const commonGroup = async (req, res) => {
   }
 };
 
+const messageReadUnread = async (req, res) => {
+  try {
+    const payload = req.body;
+
+    const room = await Room.findOne({ _id: payload._id });
+
+    if (!room) {
+      return error(res, {
+        msg: "Please provide valid room's _id!!",
+        error: [],
+      });
+    }
+    if (payload.markAsRead) {
+      let messages = await Message.find({
+        roomId: payload._id,
+        sender: { $ne: req.user._id },
+        seenBy: { $ne: req.user._id },
+      });
+
+      let eventsData = {
+        [MessageStatus.SEND]: [],
+        [MessageStatus.RECEIVED]: [],
+        [MessageStatus.SEEN]: [],
+      };
+      const totalUserCount = await RoomUser.countDocuments({
+        roomId: payload._id,
+      });
+      await Promise.all(
+        messages.map(async (message) => {
+          if (!message.seenBy.includes(req.user._id)) {
+            let status = MessageStatus.SEND;
+            if (totalUserCount == message.seenBy.length + 1) {
+              eventsData[MessageStatus.SEEN].push(message._id);
+              status = MessageStatus.SEEN;
+            } else {
+              eventsData[MessageStatus.SEND].push(message._id);
+            }
+            await updateMessageStatusByMessageIds(
+              payload._id,
+              [message._id],
+              status,
+              req.user._id
+            );
+          }
+        })
+      );
+      Object.keys(eventsData).forEach((event) => {
+        if (eventsData[event].length > 0) {
+          io.emit(
+            room.roomId,
+            {
+              messageIds: eventsData[event],
+              status: parseInt(event),
+              _id: payload._id,
+            },
+            "messageSeen"
+          );
+        }
+      });
+    } else {
+      const lastMessage = await Message.findOne(
+        {
+          roomId: payload._id,
+          sender: { $ne: req.user._id },
+        },
+        {},
+        { sort: { createdAt: -1 } }
+      );
+
+      if (lastMessage) {
+        await Message.updateOne(
+          { _id: lastMessage._id },
+          { $pull: { seenBy: req.user._id }, status: MessageStatus.RECEIVED }
+        );
+      }
+    }
+    const rooms = await Room.aggregate([
+      {
+        $lookup: {
+          from: "groups",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "group",
+        },
+      },
+      {
+        $unwind: {
+          path: "$group",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          roomName: { $ifNull: ["$group.name", ""] },
+          roomImage: { $ifNull: ["$group.image", ""] },
+          roomDescription: { $ifNull: ["$group.description", ""] },
+        },
+      },
+      {
+        $lookup: {
+          from: "roomusers",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "users",
+        },
+      },
+      {
+        $match: {
+          "users.userId": new mongoose.Types.ObjectId(req.user._id),
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "users.userId",
+          foreignField: "_id",
+          as: "userDetails",
+        },
+      },
+      {
+        $lookup: {
+          from: "blockedusers",
+          localField: "users.userId",
+          foreignField: "userId",
+          as: "blockedDetails",
+        },
+      },
+      {
+        $addFields: {
+          users: {
+            $map: {
+              input: "$users",
+              as: "roomUser",
+              in: {
+                $mergeObjects: [
+                  {
+                    isAdmin: "$$roomUser.isAdmin",
+                    isNotificationEnabled: {
+                      $ifNull: ["$$roomUser.isNotificationEnabled", true],
+                    },
+                  },
+                  {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: "$userDetails",
+                          as: "userDetail",
+                          cond: {
+                            $and: [
+                              {
+                                $eq: ["$$userDetail._id", "$$roomUser.userId"],
+                              },
+                              {
+                                $or: [
+                                  { $eq: ["$$userDetail.isDeleted", false] }, // isDeleted is false
+                                  {
+                                    $not: {
+                                      $ifNull: [
+                                        "$$userDetail.isDeleted",
+                                        false,
+                                      ],
+                                    },
+                                  }, // isDeleted is undefined or null
+                                ],
+                              },
+                            ],
+                          },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                  {
+                    isBlocked: {
+                      $gt: [
+                        {
+                          $size: {
+                            $filter: {
+                              input: "$blockedDetails",
+                              as: "blockedDetail",
+                              cond: {
+                                $and: [
+                                  {
+                                    $eq: [
+                                      "$$blockedDetail.blockedBy",
+                                      new mongoose.Types.ObjectId(req.user._id),
+                                    ],
+                                  },
+                                  {
+                                    $eq: [
+                                      "$$blockedDetail.userId",
+                                      "$$roomUser.userId",
+                                    ],
+                                  },
+                                ],
+                              },
+                            },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "messages",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "messages",
+        },
+      },
+      {
+        $addFields: {
+          lastMessage: {
+            $arrayElemAt: [
+              {
+                $slice: ["$messages", -1],
+              },
+              0,
+            ],
+          },
+          unseenMessageCount: {
+            $size: {
+              $filter: {
+                input: "$messages",
+                as: "message",
+                cond: {
+                  $not: {
+                    $in: [
+                      new mongoose.Types.ObjectId(req.user._id),
+                      "$$message.seenBy",
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          lastMessageDate: {
+            $ifNull: ["$lastMessage.createdAt", "$createdAt"],
+          },
+        },
+      },
+      {
+        $sort: {
+          lastMessageDate: -1,
+        },
+      },
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(payload._id),
+        },
+      },
+      {
+        $project: {
+          messages: 0,
+          group: 0,
+          userDetails: 0,
+          lastMessageDate: 0,
+          lastMessage: {
+            seenBy: 0,
+            sender: 0,
+            attachments: 0,
+          },
+        },
+      },
+    ]);
+
+    return success(res, {
+      msg: `Message ${payload.markAsRead ? "read" : "unread"} successfully!!`,
+      data: rooms[0],
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
 module.exports = {
   createRoom,
   index,
   getBasicChatroomDetails,
   commonGroup,
+  messageReadUnread,
 };

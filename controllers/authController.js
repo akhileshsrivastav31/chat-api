@@ -116,6 +116,9 @@ const registerUser = async (req, res) => {
     user.settings = await UserSetting.findOne({
       userId: req.user._id,
     });
+    if (user.settings == null) {
+      user.settings = await UserSetting.create({ userId: req.user._id });
+    }
     return success(res, {
       data: user,
       msg: "User details fetched successfully!!",

@@ -105,7 +105,6 @@ const verifyToken = async (req, res, next) => {
           statusCode: 403,
         });
       }
-      console.log(dbUser);
       if (dbUser?.isDeleted) {
         return error(res, {
           msg: "Your account is deleted.",
