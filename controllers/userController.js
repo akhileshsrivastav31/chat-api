@@ -3,6 +3,8 @@ const BlockedUser = require("../models/blockedUserModel");
 const RoomUser = require("../models/roomUser");
 const User = require("../models/userModel");
 const UserSetting = require("../models/userSettings");
+const Room = require("../models/roomModel");
+const { getRoomInfoByRoomId } = require("../utils/commonFunction");
 const firebaseAdmin = require("../utils/firebase");
 
 const addUpdateSetting = async (req, res) => {
@@ -67,9 +69,13 @@ const blockUnblockUser = async (req, res) => {
         userId: payload._id,
       });
     }
+    let room = {};
+    if (payload._roomId) {
+      room = await getRoomInfoByRoomId(payload._roomId, req.user._id);
+    }
     return success(res, {
       msg: `User ${isBlocked ? "blocked" : "unblocked"} successfully!!`,
-      data: {},
+      data: room,
     });
   } catch (err) {
     console.log(err);
@@ -119,6 +125,28 @@ const deleteUser = async (req, res) => {
         authId: req.user.authId + "_deleted",
       }
     );
+    let rooms = await RoomUser.find({ userId: req.user._id });
+    let roomIds = rooms.map((e) => e.roomId);
+    await RoomUser.updateMany(
+      {
+        userId: req.user._id,
+      },
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+      }
+    );
+    await Room.updateMany(
+      {
+        _id: { $in: roomIds },
+        type: "private",
+      },
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+      }
+    );
+
     return success(res, {
       msg: "User deleted successfully!!",
       data: {},

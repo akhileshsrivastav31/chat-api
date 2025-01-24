@@ -23,6 +23,23 @@ const sendMessage = async (req, res) => {
         error: ["Please enter message or upload attachment!!"],
       });
     }
+    const roomData = await Room.findOne({
+      _id: payload._id,
+      $or: [
+        {
+          isDeleted: { $exists: false },
+        },
+        {
+          isDeleted: false,
+        },
+      ],
+    });
+    if (!roomData) {
+      return error(res, {
+        msg: "Invalid room id!!",
+        error: ["Invalid room id!!"],
+      });
+    }
     payload["sender"] = req.user._id;
     const room = await Room.findOne({ _id: payload._id });
     if (!room) {
@@ -119,6 +136,28 @@ const sendMessage = async (req, res) => {
         $match: {
           roomId: room._id,
           userId: { $ne: req.user._id },
+          $and: [
+            {
+              $or: [
+                {
+                  isNotificationEnabled: { $exists: false },
+                },
+                {
+                  isNotificationEnabled: true,
+                },
+              ],
+            },
+            {
+              $or: [
+                {
+                  isDeleted: { $exists: false },
+                },
+                {
+                  isDeleted: true,
+                },
+              ],
+            },
+          ],
         },
       },
       {

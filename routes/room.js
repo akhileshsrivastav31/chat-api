@@ -4,6 +4,8 @@ const { roomController } = require("../controllers");
 const {
   roomValidation,
   messageReadUnreadValidation,
+  muteUnmuteValidation,
+  deleteChatRoomValidation,
 } = require("../validations/roomValidation");
 const router = express.Router();
 
@@ -26,6 +28,20 @@ router.put(
   verifyToken,
   messageReadUnreadValidation,
   roomController.messageReadUnread
+);
+
+router.put(
+  "/muteUnmuteChatRoom",
+  verifyToken,
+  muteUnmuteValidation,
+  roomController.muteUnmuteChatRoom
+);
+
+router.put(
+  "/deleteChatRoom",
+  verifyToken,
+  deleteChatRoomValidation,
+  roomController.deleteChatRoom
 );
 
 module.exports = router;

@@ -24,6 +24,7 @@ const blockUnblockValidation = async (req, res, next) => {
     _id: Joi.string().required().messages({
       "any.required": "User Id field is required",
     }),
+    _roomId: Joi.string().optional().allow("", null),
   });
   await validate(req, res, next, schema);
 };

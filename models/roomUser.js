@@ -8,7 +8,7 @@ const RoomUserModel = new mongoose.Schema({
     required: true,
   },
   isAdmin: { type: Boolean, default: false },
-  isNotificationEnabled: { type: Boolean, default: false },
+  isNotificationEnabled: { type: Boolean, default: true },
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },

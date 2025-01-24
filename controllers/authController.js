@@ -8,9 +8,11 @@ const getUser = async (req, res) => {
     let response = {};
     if (req.user) {
       response = req.user.toJSON();
-      response.settings = await UserSetting.findOne({
-        userId: req.user._id,
-      });
+      if (response) {
+        response.settings = await UserSetting.findOne({
+          userId: req.user?._id,
+        });
+      }
     }
     return success(res, {
       data: response,
@@ -114,11 +116,11 @@ const registerUser = async (req, res) => {
     }
     user = user.toJSON();
     user.settings = await UserSetting.findOne({
-      userId: req.user._id,
+      userId: user._id,
     });
     if (user.settings == null) {
       user.settings = await UserSetting.create({
-        userId: req.user._id,
+        userId: user._id,
         groupNotificationDisabled: false,
         individualNotificationDisabled: false,
       });

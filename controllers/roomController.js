@@ -8,6 +8,7 @@ const Message = require("../models/messageModel");
 const { updateMessageStatusByMessageIds } = require("../events/functions");
 const { MessageStatus } = require("../enums");
 const { getSocketIo } = require("../helpers/socket");
+const { getRoomInfoByRoomId } = require("../utils/commonFunction");
 const io = getSocketIo();
 
 const createRoom = async (req, res) => {
@@ -35,6 +36,14 @@ const createRoom = async (req, res) => {
       {
         $match: {
           userId: { $in: userIds },
+          $or: [
+            {
+              isDeleted: { $exists: false },
+            },
+            {
+              isDeleted: false,
+            },
+          ],
         },
       },
       {
@@ -59,6 +68,14 @@ const createRoom = async (req, res) => {
     if (roomAlreadyExists.length > 0) {
       let room = await Room.findOne({
         _id: { $in: roomAlreadyExists?.map((e) => e.roomId) },
+        $or: [
+          {
+            isDeleted: { $exists: false },
+          },
+          {
+            isDeleted: false,
+          },
+        ],
         type: "private",
       });
       if (room) {
@@ -211,6 +228,18 @@ const createRoom = async (req, res) => {
 const index = async (req, res) => {
   try {
     const rooms = await Room.aggregate([
+      {
+        $match: {
+          $or: [
+            {
+              isDeleted: { $exists: false },
+            },
+            {
+              isDeleted: false,
+            },
+          ],
+        },
+      },
       {
         $lookup: {
           from: "groups",
@@ -391,13 +420,13 @@ const index = async (req, res) => {
           lastMessageDate: -1,
         },
       },
-
       {
         $project: {
           messages: 0,
           group: 0,
           userDetails: 0,
           lastMessageDate: 0,
+          blockedDetails: 0,
           lastMessage: {
             seenBy: 0,
             sender: 0,
@@ -466,6 +495,14 @@ const getBasicChatroomDetails = async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: "blockedusers",
+          localField: "users.userId",
+          foreignField: "userId",
+          as: "blockedDetails",
+        },
+      },
+      {
         $addFields: {
           users: {
             $map: {
@@ -475,6 +512,9 @@ const getBasicChatroomDetails = async (req, res) => {
                 $mergeObjects: [
                   {
                     isAdmin: "$$roomUser.isAdmin",
+                    isNotificationEnabled: {
+                      $ifNull: ["$$roomUser.isNotificationEnabled", true],
+                    },
                   },
                   {
                     $arrayElemAt: [
@@ -506,6 +546,37 @@ const getBasicChatroomDetails = async (req, res) => {
                       },
                       0,
                     ],
+                  },
+                  {
+                    isBlocked: {
+                      $gt: [
+                        {
+                          $size: {
+                            $filter: {
+                              input: "$blockedDetails",
+                              as: "blockedDetail",
+                              cond: {
+                                $and: [
+                                  {
+                                    $eq: [
+                                      "$$blockedDetail.blockedBy",
+                                      new mongoose.Types.ObjectId(req.user._id),
+                                    ],
+                                  },
+                                  {
+                                    $eq: [
+                                      "$$blockedDetail.userId",
+                                      "$$roomUser.userId",
+                                    ],
+                                  },
+                                ],
+                              },
+                            },
+                          },
+                        },
+                        0,
+                      ],
+                    },
                   },
                 ],
               },
@@ -701,210 +772,114 @@ const messageReadUnread = async (req, res) => {
         );
       }
     }
-    const rooms = await Room.aggregate([
-      {
-        $lookup: {
-          from: "groups",
-          localField: "_id",
-          foreignField: "roomId",
-          as: "group",
-        },
-      },
-      {
-        $unwind: {
-          path: "$group",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $addFields: {
-          roomName: { $ifNull: ["$group.name", ""] },
-          roomImage: { $ifNull: ["$group.image", ""] },
-          roomDescription: { $ifNull: ["$group.description", ""] },
-        },
-      },
-      {
-        $lookup: {
-          from: "roomusers",
-          localField: "_id",
-          foreignField: "roomId",
-          as: "users",
-        },
-      },
-      {
-        $match: {
-          "users.userId": new mongoose.Types.ObjectId(req.user._id),
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "users.userId",
-          foreignField: "_id",
-          as: "userDetails",
-        },
-      },
-      {
-        $lookup: {
-          from: "blockedusers",
-          localField: "users.userId",
-          foreignField: "userId",
-          as: "blockedDetails",
-        },
-      },
-      {
-        $addFields: {
-          users: {
-            $map: {
-              input: "$users",
-              as: "roomUser",
-              in: {
-                $mergeObjects: [
-                  {
-                    isAdmin: "$$roomUser.isAdmin",
-                    isNotificationEnabled: {
-                      $ifNull: ["$$roomUser.isNotificationEnabled", true],
-                    },
-                  },
-                  {
-                    $arrayElemAt: [
-                      {
-                        $filter: {
-                          input: "$userDetails",
-                          as: "userDetail",
-                          cond: {
-                            $and: [
-                              {
-                                $eq: ["$$userDetail._id", "$$roomUser.userId"],
-                              },
-                              {
-                                $or: [
-                                  { $eq: ["$$userDetail.isDeleted", false] }, // isDeleted is false
-                                  {
-                                    $not: {
-                                      $ifNull: [
-                                        "$$userDetail.isDeleted",
-                                        false,
-                                      ],
-                                    },
-                                  }, // isDeleted is undefined or null
-                                ],
-                              },
-                            ],
-                          },
-                        },
-                      },
-                      0,
-                    ],
-                  },
-                  {
-                    isBlocked: {
-                      $gt: [
-                        {
-                          $size: {
-                            $filter: {
-                              input: "$blockedDetails",
-                              as: "blockedDetail",
-                              cond: {
-                                $and: [
-                                  {
-                                    $eq: [
-                                      "$$blockedDetail.blockedBy",
-                                      new mongoose.Types.ObjectId(req.user._id),
-                                    ],
-                                  },
-                                  {
-                                    $eq: [
-                                      "$$blockedDetail.userId",
-                                      "$$roomUser.userId",
-                                    ],
-                                  },
-                                ],
-                              },
-                            },
-                          },
-                        },
-                        0,
-                      ],
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: "messages",
-          localField: "_id",
-          foreignField: "roomId",
-          as: "messages",
-        },
-      },
-      {
-        $addFields: {
-          lastMessage: {
-            $arrayElemAt: [
-              {
-                $slice: ["$messages", -1],
-              },
-              0,
-            ],
-          },
-          unseenMessageCount: {
-            $size: {
-              $filter: {
-                input: "$messages",
-                as: "message",
-                cond: {
-                  $not: {
-                    $in: [
-                      new mongoose.Types.ObjectId(req.user._id),
-                      "$$message.seenBy",
-                    ],
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      {
-        $addFields: {
-          lastMessageDate: {
-            $ifNull: ["$lastMessage.createdAt", "$createdAt"],
-          },
-        },
-      },
-      {
-        $sort: {
-          lastMessageDate: -1,
-        },
-      },
-      {
-        $match: {
-          _id: new mongoose.Types.ObjectId(payload._id),
-        },
-      },
-      {
-        $project: {
-          messages: 0,
-          group: 0,
-          userDetails: 0,
-          lastMessageDate: 0,
-          lastMessage: {
-            seenBy: 0,
-            sender: 0,
-            attachments: 0,
-          },
-        },
-      },
-    ]);
+    const roomData = await getRoomInfoByRoomId(payload._id, req.user._id);
 
     return success(res, {
       msg: `Message ${payload.markAsRead ? "read" : "unread"} successfully!!`,
-      data: rooms[0],
+      data: roomData,
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
+const muteUnmuteChatRoom = async (req, res) => {
+  try {
+    const payload = req.body;
+    const roomUser = await RoomUser.findOne({
+      roomId: payload._id,
+      userId: req.user._id,
+    });
+    if (!roomUser) {
+      return error(res, {
+        msg: "Please provide valid room's _id!!",
+        error: [],
+      });
+    }
+    if (
+      roomUser.isNotificationEnabled == undefined ||
+      roomUser.isNotificationEnabled == null
+    ) {
+      roomUser.isNotificationEnabled = true;
+    }
+
+    await RoomUser.updateOne(
+      { roomId: payload._id, userId: req.user._id },
+      { $set: { isNotificationEnabled: !roomUser.isNotificationEnabled } }
+    );
+    const room = await getRoomInfoByRoomId(payload._id, req.user._id);
+    return success(res, {
+      msg: `Room ${
+        roomUser.isNotificationEnabled ? "unmuted" : "muted"
+      } successfully!!`,
+      data: room,
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
+const deleteChatRoom = async (req, res) => {
+  try {
+    const payload = req.body;
+    const room = await Room.findOne({
+      _id: payload._id,
+      $or: [
+        {
+          isDeleted: { $exists: false },
+        },
+        {
+          isDeleted: false,
+        },
+      ],
+    });
+    if (!room) {
+      return error(res, {
+        msg: "Please provide valid room's _id!!",
+        error: [],
+      });
+    }
+    if (room.type == "group") {
+      const roomUser = await RoomUser.findOne({
+        roomId: payload._id,
+        userId: req.user._id,
+      });
+      if (roomUser.isAdmin == false) {
+        return error(res, {
+          msg: "You are not admin of this group!!",
+          error: [],
+        });
+      }
+    }
+    await Room.updateOne(
+      { _id: payload._id },
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+      }
+    );
+
+    await RoomUser.updateMany(
+      {
+        roomId: payload._id,
+      },
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+      }
+    );
+
+    return success(res, {
+      msg: "Room deleted successfully!!",
+      data: {},
     });
   } catch (err) {
     console.log(err);
@@ -921,4 +896,6 @@ module.exports = {
   getBasicChatroomDetails,
   commonGroup,
   messageReadUnread,
+  muteUnmuteChatRoom,
+  deleteChatRoom,
 };
