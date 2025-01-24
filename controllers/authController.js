@@ -117,7 +117,11 @@ const registerUser = async (req, res) => {
       userId: req.user._id,
     });
     if (user.settings == null) {
-      user.settings = await UserSetting.create({ userId: req.user._id });
+      user.settings = await UserSetting.create({
+        userId: req.user._id,
+        groupNotificationDisabled: false,
+        individualNotificationDisabled: false,
+      });
     }
     return success(res, {
       data: user,
