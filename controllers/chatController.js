@@ -23,7 +23,7 @@ const sendMessage = async (req, res) => {
         error: ["Please enter message or upload attachment!!"],
       });
     }
-    const roomData = await Room.findOne({
+    const room = await Room.findOne({
       _id: payload._id,
       $or: [
         {
@@ -34,20 +34,33 @@ const sendMessage = async (req, res) => {
         },
       ],
     });
-    if (!roomData) {
-      return error(res, {
-        msg: "Invalid room id!!",
-        error: ["Invalid room id!!"],
-      });
-    }
-    payload["sender"] = req.user._id;
-    const room = await Room.findOne({ _id: payload._id });
     if (!room) {
       return error(res, {
         msg: "Please enter valid room id!!",
         error: ["Please enter valid room id!!"],
       });
     }
+    if (room.type == "private") {
+      const roomUser = await RoomUser.findOne({
+        roomId: payload._id,
+        userId: { $ne: req.user._id },
+      }).populate("userId", "name");
+      if (roomUser) {
+        const blockedUser = await BlockedUser.findOne({
+          blockedBy: req.user._id,
+          userId: roomUser.userId,
+        });
+        if (blockedUser) {
+          return error(res, {
+            msg: `Unblock ${roomUser.userId?.name} to send message!!`,
+            error: [`Unblock ${roomUser.userId?.name} to send message!!`],
+          });
+        }
+      }
+    }
+
+    payload["sender"] = req.user._id;
+
     payload["attachments"] = [];
     payload["type"] = "text";
     if (req.files?.length > 0) {
@@ -311,7 +324,28 @@ const index = async (req, res) => {
       return x;
     });
 
-    const total = await Message.countDocuments({ roomId });
+    const total = await Message.countDocuments({
+      roomId,
+      $and: [
+        {
+          $or: [
+            {
+              sentInBlockMode: true,
+              sender: req.user._id,
+            },
+            {
+              sentInBlockMode: { $exists: false },
+            },
+            {
+              sentInBlockMode: false,
+            },
+          ],
+        },
+        {
+          $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+        },
+      ],
+    });
     chats = chats.reverse();
 
     return success(res, {
@@ -351,12 +385,23 @@ const getChatRoomMedia = async (req, res) => {
           attachments: { $exists: true, $ne: null },
           roomId: new mongoose.Types.ObjectId(roomId),
           $expr: { $gt: [{ $size: "$attachments" }, 0] },
-          $or: [
+          $and: [
             {
-              isDeleted: false,
+              $or: [
+                {
+                  sentInBlockMode: true,
+                  sender: req.user._id,
+                },
+                {
+                  sentInBlockMode: { $exists: false },
+                },
+                {
+                  sentInBlockMode: false,
+                },
+              ],
             },
             {
-              isDeleted: { $exists: false },
+              $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
             },
           ],
         },
@@ -401,7 +446,25 @@ const getChatRoomMedia = async (req, res) => {
         $match: {
           attachments: { $exists: true, $ne: null },
           roomId: new mongoose.Types.ObjectId(roomId),
-          $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+          $and: [
+            {
+              $or: [
+                {
+                  sentInBlockMode: true,
+                  sender: req.user._id,
+                },
+                {
+                  sentInBlockMode: { $exists: false },
+                },
+                {
+                  sentInBlockMode: false,
+                },
+              ],
+            },
+            {
+              $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+            },
+          ],
         },
       },
       {
