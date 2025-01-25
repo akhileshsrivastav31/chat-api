@@ -88,7 +88,7 @@ const verifyToken = async (req, res, next) => {
     const dbUser = await User.findOne({
       authId: user.sub,
     });
-    if (!dbUser && !req.url?.endsWith("/api/v1/auth")) {
+    if (!dbUser && !req.baseUrl?.endsWith("/api/v1/auth")) {
       return error(res, {
         msg: "User not found!!",
         statusCode: 404,
