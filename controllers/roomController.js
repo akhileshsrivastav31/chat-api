@@ -272,6 +272,8 @@ const index = async (req, res) => {
       {
         $match: {
           "users.userId": new mongoose.Types.ObjectId(req.user._id),
+          isDeleted: { $exists: false },
+          isDeleted: false,
         },
       },
       {

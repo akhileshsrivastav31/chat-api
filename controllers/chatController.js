@@ -40,8 +40,9 @@ const sendMessage = async (req, res) => {
         error: ["Please enter valid room id!!"],
       });
     }
+    let roomUser = {};
     if (room.type == "private") {
-      const roomUser = await RoomUser.findOne({
+      roomUser = await RoomUser.findOne({
         roomId: payload._id,
         userId: { $ne: req.user._id },
       }).populate("userId", "name");
@@ -96,8 +97,10 @@ const sendMessage = async (req, res) => {
         $or: [
           {
             blockedBy: req.user._id,
+            userId: roomUser.userId,
           },
           {
+            blockedBy: roomUser.userId,
             userId: req.user._id,
           },
         ],
@@ -166,7 +169,7 @@ const sendMessage = async (req, res) => {
                   isDeleted: { $exists: false },
                 },
                 {
-                  isDeleted: true,
+                  isDeleted: false,
                 },
               ],
             },
