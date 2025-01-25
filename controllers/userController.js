@@ -6,6 +6,7 @@ const UserSetting = require("../models/userSettings");
 const Room = require("../models/roomModel");
 const { getRoomInfoByRoomId } = require("../utils/commonFunction");
 const firebaseAdmin = require("../utils/firebase");
+const UserNotificationToken = require("../models/userNotificationTokenModel");
 
 const addUpdateSetting = async (req, res) => {
   try {
@@ -146,6 +147,10 @@ const deleteUser = async (req, res) => {
         deletedAt: new Date(),
       }
     );
+
+    await UserNotificationToken.deleteMany({
+      userId: req.user._id,
+    });
 
     return success(res, {
       msg: "User deleted successfully!!",
