@@ -1,5 +1,20 @@
+# Use an official Debian or Ubuntu image
+FROM ubuntu:22.04
+
 # Use the Node.js official image
 FROM node:18
+
+# Set environment variables to prevent interactive prompts during installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update the package lists and install FFmpeg
+RUN apt-get update && \
+    apt-get install -y ffmpeg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Verify FFmpeg installation
+RUN ffmpeg -version
 
 # Set the working directory in the container
 WORKDIR /app
