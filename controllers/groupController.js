@@ -29,7 +29,17 @@ const findOrCreateUser = async (phoneNumber) => {
 const getRoomUsers = async (_id) => {
   return await RoomUser.aggregate([
     {
-      $match: { roomId: new mongoose.Types.ObjectId(_id), isDeleted: false },
+      $match: {
+        roomId: new mongoose.Types.ObjectId(_id),
+        $or: [
+          {
+            isDeleted: { $exists: false },
+          },
+          {
+            isDeleted: false,
+          },
+        ],
+      },
     },
     {
       $lookup: {

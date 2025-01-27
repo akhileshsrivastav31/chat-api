@@ -272,8 +272,22 @@ const index = async (req, res) => {
       {
         $match: {
           "users.userId": new mongoose.Types.ObjectId(req.user._id),
-          isDeleted: { $exists: false },
-          isDeleted: false,
+        },
+      },
+      {
+        $addFields: {
+          users: {
+            $filter: {
+              input: "$users",
+              as: "user",
+              cond: {
+                $or: [
+                  { $eq: ["$$user.isDeleted", false] }, // isDeleted is false
+                  { $not: { $ifNull: ["$$user.isDeleted", false] } }, // isDeleted is undefined or null
+                ],
+              },
+            },
+          },
         },
       },
       {
@@ -489,6 +503,22 @@ const getBasicChatroomDetails = async (req, res) => {
         },
       },
       {
+        $addFields: {
+          users: {
+            $filter: {
+              input: "$users",
+              as: "user",
+              cond: {
+                $or: [
+                  { $eq: ["$$user.isDeleted", false] }, // isDeleted is false
+                  { $not: { $ifNull: ["$$user.isDeleted", false] } }, // isDeleted is undefined or null
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
         $lookup: {
           from: "users",
           localField: "users.userId",
@@ -625,7 +655,20 @@ const getBasicChatroomDetails = async (req, res) => {
 const commonGroup = async (req, res) => {
   try {
     const roomId = req.params.roomId;
-    const roomUsers = await RoomUser.find({ roomId: roomId }, { userId: 1 });
+    const roomUsers = await RoomUser.find(
+      {
+        roomId: roomId,
+        $or: [
+          {
+            isDeleted: { $exists: false },
+          },
+          {
+            isDeleted: false,
+          },
+        ],
+      },
+      { userId: 1 }
+    );
     const userIds = roomUsers.map((e) => e.userId);
 
     const room = await Room.findOne({ _id: roomId });
@@ -638,7 +681,17 @@ const commonGroup = async (req, res) => {
 
     const groups = await Room.aggregate([
       {
-        $match: { type: "group" }, // Only include rooms of type "group"
+        $match: {
+          type: "group",
+          $or: [
+            {
+              isDeleted: { $exists: false },
+            },
+            {
+              isDeleted: false,
+            },
+          ],
+        }, // Only include rooms of type "group"
       },
       {
         $lookup: {
@@ -672,6 +725,14 @@ const commonGroup = async (req, res) => {
       {
         $match: {
           "users.userId": { $all: userIds },
+          $or: [
+            {
+              "users.isDeleted": { $exists: false },
+            },
+            {
+              "users.isDeleted": false,
+            },
+          ],
         },
       },
       {

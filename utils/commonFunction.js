@@ -38,6 +38,22 @@ const getRoomInfoByRoomId = async (roomId, userId) => {
       },
     },
     {
+      $addFields: {
+        users: {
+          $filter: {
+            input: "$users",
+            as: "user",
+            cond: {
+              $or: [
+                { $eq: ["$$user.isDeleted", false] }, // isDeleted is false
+                { $not: { $ifNull: ["$$user.isDeleted", false] } }, // isDeleted is undefined or null
+              ],
+            },
+          },
+        },
+      },
+    },
+    {
       $lookup: {
         from: "users",
         localField: "users.userId",
