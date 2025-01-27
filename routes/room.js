@@ -6,6 +6,7 @@ const {
   messageReadUnreadValidation,
   muteUnmuteValidation,
   deleteChatRoomValidation,
+  leaveGroupValidation,
 } = require("../validations/roomValidation");
 const router = express.Router();
 
@@ -28,6 +29,13 @@ router.put(
   verifyToken,
   messageReadUnreadValidation,
   roomController.messageReadUnread
+);
+
+router.put(
+  "/leaveGroup",
+  verifyToken,
+  leaveGroupValidation,
+  roomController.leaveGroup
 );
 
 router.put(

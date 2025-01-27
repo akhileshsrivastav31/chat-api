@@ -270,11 +270,6 @@ const index = async (req, res) => {
         },
       },
       {
-        $match: {
-          "users.userId": new mongoose.Types.ObjectId(req.user._id),
-        },
-      },
-      {
         $addFields: {
           users: {
             $filter: {
@@ -288,6 +283,11 @@ const index = async (req, res) => {
               },
             },
           },
+        },
+      },
+      {
+        $match: {
+          "users.userId": new mongoose.Types.ObjectId(req.user._id),
         },
       },
       {
@@ -629,6 +629,7 @@ const getBasicChatroomDetails = async (req, res) => {
           messages: 0,
           group: 0,
           userDetails: 0,
+          blockedDetails: 0,
         },
       },
     ]);
@@ -953,6 +954,225 @@ const deleteChatRoom = async (req, res) => {
   }
 };
 
+const leaveGroup = async (req, res) => {
+  try {
+    const payload = req.body;
+    let room = await Room.findOne({
+      _id: payload._id,
+      $or: [
+        {
+          isDeleted: { $exists: false },
+        },
+        {
+          isDeleted: false,
+        },
+      ],
+    });
+    if (!room) {
+      return error(res, {
+        msg: "Please provide valid room id or room already deleted!!",
+      });
+    }
+    let roomUser = await RoomUser.findOne({
+      userId: req.user._id,
+      roomId: payload._id,
+      $or: [
+        {
+          isDeleted: { $exists: false },
+        },
+        {
+          isDeleted: false,
+        },
+      ],
+    });
+    if (!roomUser) {
+      return error(res, {
+        msg: "Please provide valid user id or this user already deleted!!",
+      });
+    }
+    roomUser.isDeleted = true;
+    await roomUser.save();
+
+    room = await Room.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(payload._id),
+        },
+      },
+      {
+        $lookup: {
+          from: "groups",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "group",
+        },
+      },
+      {
+        $unwind: {
+          path: "$group",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          roomName: { $ifNull: ["$group.name", ""] },
+          roomImage: { $ifNull: ["$group.image", ""] },
+          roomDescription: { $ifNull: ["$group.description", ""] },
+        },
+      },
+      {
+        $lookup: {
+          from: "roomusers",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "users",
+        },
+      },
+      {
+        $addFields: {
+          users: {
+            $filter: {
+              input: "$users",
+              as: "user",
+              cond: {
+                $or: [
+                  { $eq: ["$$user.isDeleted", false] }, // isDeleted is false
+                  { $not: { $ifNull: ["$$user.isDeleted", false] } }, // isDeleted is undefined or null
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "users.userId",
+          foreignField: "_id",
+          as: "userDetails",
+        },
+      },
+      {
+        $lookup: {
+          from: "blockedusers",
+          localField: "users.userId",
+          foreignField: "userId",
+          as: "blockedDetails",
+        },
+      },
+      {
+        $addFields: {
+          users: {
+            $map: {
+              input: "$users",
+              as: "roomUser",
+              in: {
+                $mergeObjects: [
+                  {
+                    isAdmin: "$$roomUser.isAdmin",
+                    isNotificationEnabled: {
+                      $ifNull: ["$$roomUser.isNotificationEnabled", true],
+                    },
+                  },
+                  {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: "$userDetails",
+                          as: "userDetail",
+                          cond: {
+                            $and: [
+                              {
+                                $eq: ["$$userDetail._id", "$$roomUser.userId"],
+                              },
+                              {
+                                $or: [
+                                  { $eq: ["$$userDetail.isDeleted", false] }, // isDeleted is false
+                                  {
+                                    $not: {
+                                      $ifNull: [
+                                        "$$userDetail.isDeleted",
+                                        false,
+                                      ],
+                                    },
+                                  }, // isDeleted is undefined or null
+                                ],
+                              },
+                            ],
+                          },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                  {
+                    isBlocked: {
+                      $gt: [
+                        {
+                          $size: {
+                            $filter: {
+                              input: "$blockedDetails",
+                              as: "blockedDetail",
+                              cond: {
+                                $and: [
+                                  {
+                                    $eq: [
+                                      "$$blockedDetail.blockedBy",
+                                      new mongoose.Types.ObjectId(req.user._id),
+                                    ],
+                                  },
+                                  {
+                                    $eq: [
+                                      "$$blockedDetail.userId",
+                                      "$$roomUser.userId",
+                                    ],
+                                  },
+                                ],
+                              },
+                            },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "messages",
+          localField: "_id",
+          foreignField: "roomId",
+          as: "messages",
+        },
+      },
+      {
+        $project: {
+          messages: 0,
+          group: 0,
+          userDetails: 0,
+          blockedDetails: 0,
+        },
+      },
+    ]);
+
+    return success(res, {
+      msg: "User removed from room successfully!!",
+      data: room,
+    });
+  } catch (err) {
+    console.log(err);
+    return error(res, {
+      msg: "Something went wrong!!",
+      error: [err.message],
+    });
+  }
+};
+
 module.exports = {
   createRoom,
   index,
@@ -961,4 +1181,5 @@ module.exports = {
   messageReadUnread,
   muteUnmuteChatRoom,
   deleteChatRoom,
+  leaveGroup,
 };

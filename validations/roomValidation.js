@@ -23,6 +23,13 @@ const muteUnmuteValidation = async (req, res, next) => {
   await validate(req, res, next, schema);
 };
 
+const leaveGroupValidation = async (req, res, next) => {
+  const schema = Joi.object().keys({
+    _id: Joi.string().required(),
+  });
+  await validate(req, res, next, schema);
+};
+
 const deleteChatRoomValidation = async (req, res, next) => {
   const schema = Joi.object().keys({
     _id: Joi.string().required(),
@@ -35,4 +42,5 @@ module.exports = {
   messageReadUnreadValidation,
   muteUnmuteValidation,
   deleteChatRoomValidation,
+  leaveGroupValidation,
 };
