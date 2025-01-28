@@ -55,6 +55,7 @@ const sendMessage = async (req, res) => {
           return error(res, {
             msg: `Unblock ${roomUser.userId?.name} to send message!!`,
             error: [`Unblock ${roomUser.userId?.name} to send message!!`],
+            statusCode: 402,
           });
         }
       }
