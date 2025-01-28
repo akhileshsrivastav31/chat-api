@@ -101,9 +101,8 @@ const registerUser = async (req, res) => {
     let user = await User.findOne({ phoneNumber: payload.phoneNumber });
 
     payload["isUserProfileCompleted"] = user?.name ? true : false;
-
+    payload["authId"] = req.cognitoUser?.sub;
     if (!user) {
-      payload["authId"] = req.cognitoUser?.sub;
       user = await User.create(payload);
     } else {
       user = await User.findOneAndUpdate(
