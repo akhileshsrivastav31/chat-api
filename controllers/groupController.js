@@ -4,7 +4,11 @@ const Group = require("../models/groupModel");
 const Room = require("../models/roomModel");
 const User = require("../models/userModel");
 const RoomUser = require("../models/roomUser");
+const UserNotificationToken = require("../models/userNotificationTokenModel");
 const { v4: uuidv4 } = require("uuid");
+const {
+  sendNotificationOnMultipleDeviceTokens,
+} = require("../services/firebaseNotification");
 
 // Helper function to find or create a user by phone number
 const findOrCreateUser = async (phoneNumber) => {
@@ -194,8 +198,129 @@ const createGroup = async (req, res) => {
       __v: room.__v,
       users: result,
     };
+    let matchQuery = {
+      $or: [
+        { userSetting: { $exists: false } },
+        { "userSetting.groupNotificationDisabled": false },
+      ],
+    };
+    // send push notification
+    let userIds = await RoomUser.aggregate([
+      {
+        $match: {
+          roomId: room._id,
+          userId: { $ne: req.user._id },
+          $and: [
+            {
+              $or: [
+                {
+                  isNotificationEnabled: { $exists: false },
+                },
+                {
+                  isNotificationEnabled: true,
+                },
+              ],
+            },
+            {
+              $or: [
+                {
+                  isDeleted: { $exists: false },
+                },
+                {
+                  isDeleted: false,
+                },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "usersettings",
+          localField: "userId",
+          foreignField: "userId",
+          as: "userSettings",
+        },
+      },
+      {
+        $addFields: {
+          userSetting: { $arrayElemAt: ["$userSettings", 0] },
+        },
+      },
+      {
+        $match: matchQuery,
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $match: {
+          $or: [
+            {
+              "user.isDeleted": { $exists: false },
+            },
+            {
+              "user.isDeleted": false,
+            },
+          ],
+        },
+      },
+      {
+        $project: {
+          userId: 1,
+        },
+      },
+    ]);
 
-    console.log(result);
+    userIds = userIds.map((doc) => doc.userId);
+    const tokens = await UserNotificationToken.find(
+      { userId: { $in: userIds } },
+      { token: 1, platform: 1 }
+    );
+    const title = `${
+      req.user.name ? req.user.name : req.user.phoneNumber
+    } has created group with you`;
+
+    let data = {
+      roomId: room._id.toString(),
+      page: "chat-detail",
+      _id: req.user._id.toString(),
+      type: room.type,
+    };
+    data["roomName"] = group.name ?? "";
+    data["roomImage"] = group.image ?? "";
+    let description = "Click to open";
+
+    if (tokens.length > 0) {
+      let androidTokens = tokens
+        .filter((t) => t.platform == "android")
+        .map((e) => e.token);
+      let iosTokens = tokens
+        .filter((t) => t.platform == "ios")
+        .map((e) => e.token);
+      if (androidTokens.length > 0)
+        sendNotificationOnMultipleDeviceTokens(
+          androidTokens,
+          title,
+          description,
+          "android",
+          data
+        );
+      if (iosTokens.length > 0)
+        sendNotificationOnMultipleDeviceTokens(
+          iosTokens,
+          title,
+          description,
+          "ios",
+          data
+        );
+    }
+
     return success(res, {
       data: response,
       msg: "Group created successfully!!",
@@ -422,6 +547,136 @@ const addUserInGroup = async (req, res) => {
       roomImage: group?.image || "",
       users: updatedUsers,
     };
+
+    if (room.type == "group") {
+      let matchQuery = {
+        $or: [
+          { userSetting: { $exists: false } },
+          { "userSetting.groupNotificationDisabled": false },
+        ],
+      };
+      // send push notification
+      let userIds = await RoomUser.aggregate([
+        {
+          $match: {
+            roomId: room._id,
+            $and: [
+              {
+                userId: { $ne: req.user._id },
+              },
+              {
+                userId: { $in: validUserEntries?.map((e) => e.userId) },
+              },
+              {
+                $or: [
+                  {
+                    isNotificationEnabled: { $exists: false },
+                  },
+                  {
+                    isNotificationEnabled: true,
+                  },
+                ],
+              },
+              {
+                $or: [
+                  {
+                    isDeleted: { $exists: false },
+                  },
+                  {
+                    isDeleted: false,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          $lookup: {
+            from: "usersettings",
+            localField: "userId",
+            foreignField: "userId",
+            as: "userSettings",
+          },
+        },
+        {
+          $addFields: {
+            userSetting: { $arrayElemAt: ["$userSettings", 0] },
+          },
+        },
+        {
+          $match: matchQuery,
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        {
+          $match: {
+            $or: [
+              {
+                "user.isDeleted": { $exists: false },
+              },
+              {
+                "user.isDeleted": false,
+              },
+            ],
+          },
+        },
+        {
+          $project: {
+            userId: 1,
+          },
+        },
+      ]);
+
+      userIds = userIds.map((doc) => doc.userId);
+      const tokens = await UserNotificationToken.find(
+        { userId: { $in: userIds } },
+        { token: 1, platform: 1 }
+      );
+      const title = `${
+        req.user.name ? req.user.name : req.user.phoneNumber
+      } has added you in a group `;
+
+      let data = {
+        roomId: room._id.toString(),
+        page: "chat-detail",
+        _id: req.user._id.toString(),
+        type: room.type,
+      };
+      data["roomName"] = group.name ?? "";
+      data["roomImage"] = group.image ?? "";
+      let description = "Click to open";
+
+      if (tokens.length > 0) {
+        let androidTokens = tokens
+          .filter((t) => t.platform == "android")
+          .map((e) => e.token);
+        let iosTokens = tokens
+          .filter((t) => t.platform == "ios")
+          .map((e) => e.token);
+        if (androidTokens.length > 0)
+          sendNotificationOnMultipleDeviceTokens(
+            androidTokens,
+            title,
+            description,
+            "android",
+            data
+          );
+        if (iosTokens.length > 0)
+          sendNotificationOnMultipleDeviceTokens(
+            iosTokens,
+            title,
+            description,
+            "ios",
+            data
+          );
+      }
+    }
 
     return success(res, {
       msg: "Users added to the group successfully",
