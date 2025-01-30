@@ -11,8 +11,15 @@ const {
 } = require("../services/firebaseNotification");
 const { default: mongoose } = require("mongoose");
 const BlockedUser = require("../models/blockedUserModel");
-const { generateThumbnail } = require("../helpers/thumbnailGenerator");
+const {
+  generateThumbnail,
+  generateThumbnailForDoc,
+} = require("../helpers/thumbnailGenerator");
 const io = getSocketIo();
+const allowedMimesForDocs = [
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
 
 const sendMessage = async (req, res) => {
   try {
@@ -75,6 +82,8 @@ const sendMessage = async (req, res) => {
               file.originalname,
               file.location
             );
+          } else if (allowedMimesForDocs.includes(file.mimetype)) {
+            thumbnailURL = await generateThumbnailForDoc(file.location);
           }
           let fileData = await Attachment.create({
             url: file.location,
